@@ -9,6 +9,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
 import cn.hutool.core.convert.Convert;
+import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.ssh.JschUtil;
 import cn.hutool.extra.ssh.Sftp;
@@ -51,14 +52,59 @@ public class Scp {
             String target = paths.get(paths.size() - 1);
             List<String> sources = paths.subList(0, paths.size() - 1);
             if (debug) {
-                System.out.printf("scp %s %s\n", sources, target);
+                System.out.printf("scp %s %s\n", String.join(" ", sources), target);
             }
             boolean upload = target.indexOf('@') > 0;
             if (upload) {
                 upload(sources, target);
             } else {
-                System.out.println("download not support yet");
+                for (String source : sources) {
+                    download(source, target);
+                }
             }
+        }
+    }
+
+    private void download(String source, String target) {
+        Matcher matcher = userHostPath.matcher(source);
+        if (matcher.matches() == false) {
+            System.out.println("source should be like user@host:/path");
+            return;
+        }
+        boolean identity = false;
+        if (identityFile != null && !identityFile.isEmpty()) {
+            File file = new File(identityFile);
+            if (!file.exists() || !file.isFile()) {
+                System.out.printf("identity_file %s not exists or not a file\n", identityFile);
+                return;
+            }
+            identity = true;
+        }
+        String sshUser = matcher.group(1);
+        String sshHost = matcher.group(2);
+        String paths = matcher.group(3);
+        if (debug) {
+            if (identity) {
+                System.out.printf("-pw %s -i %s -P %s scp %s@%s:%s %s\n", passwd, identityFile, port, sshUser, sshHost,
+                        source, target);
+            } else {
+                System.out.printf("-pw %s -P %s scp %s@%s:%s %s\n", passwd, port, sshUser, sshHost, source, target);
+            }
+        }
+        try (Sftp sftp = identity
+                ? JschUtil.createSftp(JschUtil.getSession(sshHost, port, sshUser, identityFile,
+                        StrUtil.isBlank(passwd) ? null : passwd.getBytes()))
+                : JschUtil.createSftp(sshHost, port, sshUser, passwd)) {
+            for (String path : paths.split("[,;]")) {
+                String dest = (new File(target, FileNameUtil.getName(path))).getAbsolutePath();
+                sftp.get(path, dest);
+                if (debug) {
+                    System.out.printf("get %s to %s success\n", source, dest);
+                }
+            }
+            System.out.printf("scp succeeded\n");
+        } catch (Exception e) {
+            System.out.printf("scp failed: %s\n", e.getMessage());
         }
     }
 

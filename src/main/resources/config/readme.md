@@ -11,8 +11,8 @@ export SSHPASS=passwd
 export SSHDEPLOY=.
 export SSHIDENTITY=identity_file
 export SSHPORT=22
-export SSHSHELL=sh auto.sh
-export SSHCRON=3 */5 * * * *
+export SSHSHELL="sh auto.sh"
+export SSHCRON="3 */5 * * * *"
 ```
 # 提取脚本文件，建议在parent目录操作
 ```

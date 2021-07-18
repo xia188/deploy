@@ -1,7 +1,5 @@
 package com.xlongwei.deploy;
 
-import java.io.File;
-
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
@@ -11,6 +9,9 @@ import cn.hutool.cron.CronUtil;
 import cn.hutool.cron.task.Task;
 import cn.hutool.log.StaticLog;
 
+/**
+ * jcron --cron "* * * * * *" --shell "pwd"
+ */
 public class Cron {
 
     @Parameter(names = { "--shell", "-s" }, description = "shell or ENV SSHSHELL")
@@ -24,10 +25,6 @@ public class Cron {
         JCommander jCommander = JCommander.newBuilder().addObject(main).build();
         jCommander.parse(args);
         main.run(jCommander);
-    }
-
-    public static void run() {
-        StaticLog.info("test run");
     }
 
     public void run(JCommander jCommander) {
@@ -55,7 +52,7 @@ public class Cron {
         public void execute() {
             try {
                 String str = RuntimeUtil.execForStr(shell);
-                StaticLog.info(str);
+                StaticLog.info("\n{}", str);
             } catch (Exception e) {
                 StaticLog.info(e.getMessage());
             }
