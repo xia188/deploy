@@ -9,10 +9,11 @@ for ((i = 0; i < ${#services[@]}; ++i)); do
     lines=`svn up cmp_${service}|wc -l`
     # cd cmp_${service} && lines=`git pull origin master|wc -l` && cd ..
     if [ $lines -gt 2 ] ; then
-        echo "$service do deploy"
+        echo "`date +"%Y-%m-%d %H:%M.%S"` $service do deploy"
         # sh deploys.sh $service
+        echo "`date +"%Y-%m-%d %H:%M.%S"` $service end deploy"
     else
-        echo "$service no change"
+        echo "`date +"%Y-%m-%d %H:%M.%S"` $service no change"
     fi
 
 done
