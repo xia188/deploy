@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.ssh.JschUtil;
 import cn.hutool.extra.ssh.Sftp;
@@ -19,11 +20,11 @@ public class Scp {
     @Parameter(names = { "-pw" }, description = "password or ENV SSHPASS")
     String passwd = System.getenv("SSHPASS");
 
-    @Parameter(names = { "-i" }, description = "identity_file")
-    String identityFile;
+    @Parameter(names = { "-i" }, description = "identity_file or ENV SSHIDENTITY")
+    String identityFile = System.getenv("SSHIDENTITY");
 
-    @Parameter(names = { "-P" }, description = "port")
-    int port = 22;
+    @Parameter(names = { "-P" }, description = "port or ENV SSHPORT")
+    int port = Convert.toInt(System.getenv("SSHPORT"), 22);
 
     @Parameter(description = "source ... target")
     List<String> paths;

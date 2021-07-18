@@ -1,0 +1,3 @@
+# 秒 分 时 日 月 周
+[com.xlongwei.deploy]
+Cron.run=*/10 * * * * *

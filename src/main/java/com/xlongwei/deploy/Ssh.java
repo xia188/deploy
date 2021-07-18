@@ -9,6 +9,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.jcraft.jsch.Session;
 
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.ssh.JschUtil;
@@ -20,11 +21,11 @@ public class Ssh {
     @Parameter(names = { "-pw" }, description = "password or ENV SSHPASS")
     String passwd = System.getenv("SSHPASS");
 
-    @Parameter(names = { "-i" }, description = "identity_file")
-    String identityFile;
+    @Parameter(names = { "-i" }, description = "identity_file or ENV SSHIDENTITY")
+    String identityFile = System.getenv("SSHIDENTITY");
 
-    @Parameter(names = { "-p" }, description = "port")
-    int port = 22;
+    @Parameter(names = { "-P" }, description = "port or ENV SSHPORT")
+    int port = Convert.toInt(System.getenv("SSHPORT"), 22);
 
     @Parameter(names = { "--debug", "-d" }, description = "Debug mode")
     boolean debug = false;
@@ -75,7 +76,9 @@ public class Ssh {
                             "\"" + command + "\"");
                 }
             }
-            Session session = identity ? JschUtil.createSession(sshHost, port, sshUser, identityFile, passwd.getBytes())
+            Session session = identity
+                    ? JschUtil.createSession(sshHost, port, sshUser, identityFile,
+                            StrUtil.isBlank(passwd) ? null : passwd.getBytes())
                     : JschUtil.createSession(sshHost, port, sshUser, passwd);
             try {
                 String exec = JschUtil.exec(session, command, CharsetUtil.CHARSET_UTF_8);
