@@ -10,7 +10,7 @@
 #### 使用说明
 ```
 cd /d/workspace/parent #进入项目父目录
-curl https://t.xlongwei.com/windows/deploy.jar
+curl https://t.xlongwei.com/windows/deploy.jar -o deploy.jar
 jar xvf ${SSHDEPLOY:-.}/deploy.jar config/
 cp config/* ./ && rm -rf config/
 vi ~/.bashrc

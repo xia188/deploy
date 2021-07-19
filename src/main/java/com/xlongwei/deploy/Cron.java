@@ -1,8 +1,5 @@
 package com.xlongwei.deploy;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
@@ -11,6 +8,7 @@ import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.ExecuteStreamHandler;
 import org.apache.commons.exec.ExecuteWatchdog;
 import org.apache.commons.exec.Executor;
+import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.OS;
 import org.apache.commons.exec.PumpStreamHandler;
 
@@ -31,6 +29,9 @@ public class Cron {
     @Parameter(names = { "--cron", "-c" }, description = "cron or ENV SSHCRON")
     String cron = StrUtil.blankToDefault(System.getenv("SSHCRON"), "3 */5 * * * *");
 
+    @Parameter(names = { "--timeout", "-t" }, description = "timeout")
+    long timeout = 120000;
+
     public static void main(String[] args) {
         Cron main = new Cron();
         JCommander jCommander = JCommander.newBuilder().addObject(main).build();
@@ -42,53 +43,55 @@ public class Cron {
         if (StrUtil.isAllBlank(shell)) {
             jCommander.usage();
         } else {
-            CronUtil.schedule(cron, new ShellTask(shell));
+            System.out.printf("%s %s\n", shell, cron);
+            CronUtil.schedule(cron, new ShellTask());
             CronUtil.setMatchSecond(true);
             CronUtil.start();
             RuntimeUtil.addShutdownHook(() -> {
                 CronUtil.stop();
-                System.out.println("Cron stop");
+                System.out.println("cron stop");
             });
         }
     }
 
-    public static class ShellTask implements Task {
+    public class ShellTask implements Task {
         private CommandLine command;
-        private volatile boolean running = false;
 
-        public ShellTask(String shell) {
+        public ShellTask() {
             this.command = CommandLine.parse(shell);
         }
 
         @Override
         public void execute() {
-            System.out.printf("cron running=%s", running);
-            if (running) {
-                return;
-            }
             try {
-                running = true;
+                System.out.println(shell);
                 Executor exe = new DefaultExecutor();
-                exe.setWorkingDirectory(new File("."));
-                exe.setExitValues(new int[] { 0, 1, 2 });
 
-                ExecuteWatchdog watchdog = new ExecuteWatchdog(120000);
+                ExecuteWatchdog watchdog = new ExecuteWatchdog(timeout);
                 exe.setWatchdog(watchdog);
 
-                final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ExecuteStreamHandler streamHandler = new PumpStreamHandler(baos);
+                LogOutputStream outAndErr = new LogOutputStream() {
+                    @Override
+                    protected void processLine(String line, int logLevel) {
+                        System.out.println(new String(line.getBytes(),
+                                OS.isFamilyWindows() ? CharsetUtil.CHARSET_GBK : CharsetUtil.CHARSET_UTF_8));
+                    }
+                };
+                ExecuteStreamHandler streamHandler = new PumpStreamHandler(outAndErr);
                 exe.setStreamHandler(streamHandler);
 
+                long s = System.currentTimeMillis();
                 int exitvalue = exe.execute(command);
+                streamHandler.stop();
+                outAndErr.close();
                 if (exe.isFailure(exitvalue) && watchdog.killedProcess()) {
                     System.out.println("timeout and killed by watchdog");
+                } else {
+                    System.out.printf("exec succeeded millis= %s ms\n", (System.currentTimeMillis() - s));
                 }
-                String str = baos.toString(OS.isFamilyWindows() ? CharsetUtil.GBK : CharsetUtil.UTF_8);
-                System.out.printf("\n%s", str);
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
-            running = false;
         }
 
     }

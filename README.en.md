@@ -6,7 +6,7 @@ windows git-bash auto deploy tool
 #### Instructions
 ```
 cd /d/workspace/parent
-curl https://t.xlongwei.com/windows/deploy.jar
+curl https://t.xlongwei.com/windows/deploy.jar -o deploy.jar
 jar xvf ${SSHDEPLOY:-.}/deploy.jar config/
 cp config/* ./ && rm -rf config/
 vi ~/.bashrc

@@ -12,13 +12,17 @@ lifechange) namespaceIps=(
     dev=25
     dat=28
 ) ;;
+logservice) namespaceIps=(
+    dev=23
+    dat=28
+) ;;
 order) namespaceIps=(
     dev=24
     dat=29
     dat=30
 ) ;;
-logservice) namespaceIps=(
-    dev=23
+person) namespaceIps=(
+    dev=25
     dat=28
 ) ;;
 *) usage ;;
