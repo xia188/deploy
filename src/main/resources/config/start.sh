@@ -28,10 +28,10 @@ PID=`ps -ef|grep cmp_${service}.jar|grep -v 'grep'|awk '{print $2}'`
 
 if [ -z "$PID" ]
 then
-    echo "$service not running"
+  echo "$service not running"
 else
-	echo "killing $service $PID"
-    kill -9 $PID
+  echo "killing $service $PID"
+  kill -9 $PID
 fi
 
 sleep 1
@@ -40,5 +40,5 @@ JVM_OPS="-server -Djava.awt.headless=true"
 JVM_OPS="$JVM_OPS -Dcmp.service=${service} -Dlogging.config=${logback}"
 JVM_OPS="$JVM_OPS -Dspring.cloud.nacos.config.server-addr=${nacos} -Dspring.cloud.nacos.config.namespace=service-namespace-${namespace} -Dspring.cloud.nacos.discovery.server-addr=${nacos} -Dspring.cloud.nacos.discovery.namespace=service-namespace-${namespace} -Dspring.profiles.active=${namespace}"
 
-nohup java $JVM_OPS -cp $cp com.sinosoft.app.Application >> /dev/null 2>&1 &
+nohup java $JVM_OPS -cp $cp com.sinosoft.app.Application &>> /dev/null &
 echo "starting ..."

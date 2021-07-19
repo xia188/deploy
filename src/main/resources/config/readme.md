@@ -25,11 +25,12 @@ rm -rf config/
 jssh -h
 jscp -h
 ```
-# 编辑deploy.sh，打开jscp注释，测试效果
+# 初始化，手动部署
 ```
+sh init.sh order 24
 sh deploy.sh dev order 24
 ```
-# 编辑auto.sh，打开sh deploys.sh注释，测试效果
+# 自动部署
 ```
 jcron
 ```

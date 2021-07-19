@@ -12,7 +12,7 @@ for ((i = 0; i < ${#services[@]}; ++i)); do
     # cd cmp_${service} && lines=`git pull origin master|wc -l` && cd ..
     if [ $lines -gt 2 ] ; then
         echo "`date +"%Y-%m-%d %H:%M.%S"` $service do deploy"
-        # sh deploys.sh $service
+        sh deploys.sh $service
         echo "`date +"%Y-%m-%d %H:%M.%S"` $service end deploy"
     else
         echo "`date +"%Y-%m-%d %H:%M.%S"` $service no change"

@@ -12,8 +12,6 @@ echo "deploy ${service} ${namespace} ${ip}"
 cd cmp_${service}
 mvn clean compile resources:resources jar:jar
 [ ! -e "~/.bashrc" ] && source ~/.bashrc
-# jscp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/code/cmp_${service}
-# jssh tomcat@${ip} "cd /home/tomcat/code;sh ${service}.sh ${service} ${namespace}"
-scp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/code/cmp_${service}
-ssh tomcat@${ip} "cd /home/tomcat/code;sh ${service}.sh ${service} ${namespace}"
+jscp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/code/cmp_${service}
+jssh tomcat@${ip} "cd /home/tomcat/code;sh ${service}.sh ${service} ${namespace}"
 cd ..

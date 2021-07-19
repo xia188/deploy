@@ -40,10 +40,8 @@ for ((i = 0; i < ${#namespaceIps[@]}; ++i)); do
         ip=10.7.128.$ip
     fi
     echo "deploy ${service} ${namespace} ${ip}"
-    # jscp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/code/cmp_${service}
-    # jssh tomcat@${ip} "cd /home/tomcat/code;sh ${service}.sh ${service} ${namespace}"
-    scp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/code/cmp_${service}
-    ssh tomcat@${ip} "cd /home/tomcat/code;sh ${service}.sh ${service} ${namespace}"
+    jscp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/code/cmp_${service}
+    jssh tomcat@${ip} "cd /home/tomcat/code;sh ${service}.sh ${service} ${namespace}"
 
 done
 cd ..
