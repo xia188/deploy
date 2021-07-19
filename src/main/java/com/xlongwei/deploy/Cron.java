@@ -32,6 +32,9 @@ public class Cron {
     @Parameter(names = { "--timeout", "-t" }, description = "timeout")
     long timeout = 120000;
 
+    @Parameter(names = { "--help", "-h", "--info" }, description = "print Usage info")
+    boolean help = false;
+
     public static void main(String[] args) {
         Cron main = new Cron();
         JCommander jCommander = JCommander.newBuilder().addObject(main).build();
@@ -40,7 +43,7 @@ public class Cron {
     }
 
     public void run(JCommander jCommander) {
-        if (StrUtil.isAllBlank(shell)) {
+        if (help || StrUtil.isAllBlank(shell)) {
             jCommander.usage();
         } else {
             System.out.printf("%s %s\n", shell, cron);
