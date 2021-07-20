@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="true">
+	<property name="LOG_NAME" value="${cmp.service:-cmp}" />
+	<property name="LOG_HOME" value="log/cmp_${LOG_NAME}" />
+	<contextName>${LOG_NAME}</contextName>
+	<property name="LOG_FILE_ENCODING" value="UTF-8" />
+	<property name="console.pattern" value="%cn %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{0}:%L %.-${logLength:-2048}msg%n" />
+	<property name="file.pattern" value="%d{HH:mm:ss.SSS} %-5level [%thread] %logger{0}:%L %msg%n" />
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder charset="${LOG_FILE_ENCODING}">
+			<pattern>${console.pattern}</pattern>
+		</encoder>
+	</appender>
+	<appender name="rollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${LOG_HOME}/${LOG_NAME}.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>
+				${LOG_HOME}/${LOG_NAME}.log.%d{yyyy-MM-dd}
+			</fileNamePattern>
+			<maxHistory>100</maxHistory>
+		</rollingPolicy>
+		<encoder charset="${LOG_FILE_ENCODING}">
+			<pattern>${file.pattern}</pattern>
+		</encoder>
+	</appender>
+	<appender name="rollingAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="rollingFile" />
+		<IncludeCallerData>true</IncludeCallerData>
+	</appender>
+	<logger name="com.xlongwei.cloud" level="debug" />
+	<logger name="springfox.documentation.spring.web.PropertySourcedRequestMappingHandlerMapping" level="debug" />
+	<logger name="springfox.documentation.spring.web.plugins.DefaultRequestHandlerCombiner" level="debug" />
+	<logger name="com.alibaba.cloud.nacos.client.NacosPropertySourceBuilder" level="debug" />
+	<root level="warn">
+		<appender-ref ref="console" />
+		<appender-ref ref="rollingAsync" />
+	</root>
+</configuration>
