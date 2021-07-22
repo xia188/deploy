@@ -29,6 +29,13 @@ jscp -h
 ```
 sh init.sh order 24
 sh deploy.sh dev order 24
+sh deploys.sh order
+```
+# 修改pom.xml后，同步目录
+```
+mvn clean compile resources:resources jar:jar
+mvn dependency:copy-dependencies -DoutputDirectory=target
+jscp --sync target tomcat@10.7.128.28:/home/tomcat/code/cmp_order
 ```
 # 自动部署
 ```
