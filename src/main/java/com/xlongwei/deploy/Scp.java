@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.SftpProgressMonitor;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 
 import cn.hutool.core.collection.CollUtil;
@@ -22,9 +23,11 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.lang.Filter;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.ssh.JschUtil;
 import cn.hutool.extra.ssh.Sftp;
+import cn.hutool.extra.ssh.Sftp.Mode;
 
 /**
  * scp file user@host:/dir
@@ -163,6 +166,32 @@ public class Scp {
         }
     };
 
+    private boolean get(Sftp sftp, String src, String dst) {
+        try {
+            sftp.getClient().get(src, dst, new ProgressMonitor());
+            if (debug) {
+                System.out.printf("get %s to %s success\n", src, dst);
+            }
+            return true;
+        } catch (Exception e) {
+            System.out.printf("get %s to %s failed\n", src, dst);
+            return false;
+        }
+    }
+
+    private boolean put(Sftp sftp, String src, String dst) {
+        try {
+            sftp.put(src, dst, new ProgressMonitor(), Mode.OVERWRITE);
+            if (debug) {
+                System.out.printf("put %s to %s success\n", src, dst);
+            }
+            return true;
+        } catch (Exception e) {
+            System.out.printf("put %s to %s failed\n", src, dst);
+            return false;
+        }
+    }
+
     private void downloadSync(Sftp sftp, String path, String target) {
         Map<String, LsEntry> entries = sftp.lsEntries(path, entryFilter).stream()
                 .collect(Collectors.toMap(LsEntry::getFilename, Function.identity()));
@@ -171,7 +200,9 @@ public class Scp {
             if (debug) {
                 System.out.printf("mkdir %s\n", target);
             }
-            dir.mkdirs();
+            if (!syncTest) {
+                dir.mkdirs();
+            }
         }
         File[] listFiles = dir.listFiles(fileFilter);
         Map<String, File> files = listFiles == null ? Collections.emptyMap()
@@ -200,7 +231,9 @@ public class Scp {
                         if (debug) {
                             System.out.printf("mkdir %s\n", name);
                         }
-                        subDir.mkdirs();
+                        if (!syncTest) {
+                            subDir.mkdirs();
+                        }
                     }
                     downloadSync(sftp, path + "/" + name, dir + "/" + name);
                 } else {
@@ -209,7 +242,7 @@ public class Scp {
                             System.out.printf("sync add %s to %s\n", name, target);
                         }
                         if (!syncTest) {
-                            sftp.get(path + "/" + name, target + "/" + name);
+                            get(sftp, path + "/" + name, target + "/" + name);
                         }
                     } else {
                         boolean change = syncTime ? file.lastModified() / 1000 < entry.getAttrs().getMTime()
@@ -219,7 +252,7 @@ public class Scp {
                                 System.out.printf("sync update %s to %s\n", name, target);
                             }
                             if (!syncTest) {
-                                sftp.get(path + "/" + name, target + "/" + name);
+                                get(sftp, path + "/" + name, target + "/" + name);
                             }
                         } else {
                             if (debug) {
@@ -237,10 +270,7 @@ public class Scp {
         boolean isFile = lsEntries != null && lsEntries.size() == 1 && path.endsWith(lsEntries.get(0).getFilename());
         if (isFile) {
             String dest = (new File(target, FileNameUtil.getName(path))).getAbsolutePath();
-            sftp.get(path, dest);
-            if (debug) {
-                System.out.printf("get %s to %s success\n", path, dest);
-            }
+            get(sftp, path, dest);
         } else {
             File dir = new File(target, FileNameUtil.getName(path));
             if (!dir.exists()) {
@@ -254,10 +284,7 @@ public class Scp {
                     download(sftp, entry.getLongname(), dir.getAbsolutePath() + "/" + entry.getFilename());
                 } else {
                     String dest = (new File(dir, FileNameUtil.getName(entry.getFilename()))).getAbsolutePath();
-                    sftp.get(path + "/" + entry.getFilename(), dest);
-                    if (debug) {
-                        System.out.printf("get %s to %s success\n", path, dest);
-                    }
+                    get(sftp, path + "/" + entry.getFilename(), dest);
                 }
             });
         }
@@ -344,7 +371,9 @@ public class Scp {
                         if (debug) {
                             System.out.printf("sync mkdir %s\n", name);
                         }
-                        sftp.mkdir(sshTarget + "/" + name);
+                        if (!syncTest) {
+                            sftp.mkdir(sshTarget + "/" + name);
+                        }
                     }
                     uploadSync(sftp, file.getAbsolutePath(), sshTarget + "/" + name);
                 } else {
@@ -353,7 +382,7 @@ public class Scp {
                             System.out.printf("sync add %s to %s\n", name, sshTarget);
                         }
                         if (!syncTest) {
-                            sftp.put(file.getAbsolutePath(), sshTarget);
+                            put(sftp, file.getAbsolutePath(), sshTarget);
                         }
                     } else {
                         boolean change = syncTime ? file.lastModified() / 1000 > entry.getAttrs().getMTime()
@@ -363,7 +392,7 @@ public class Scp {
                                 System.out.printf("sync update %s to %s\n", name, sshTarget);
                             }
                             if (!syncTest) {
-                                sftp.put(file.getAbsolutePath(), sshTarget);
+                                put(sftp, file.getAbsolutePath(), sshTarget);
                             }
                         } else {
                             if (debug) {
@@ -379,10 +408,7 @@ public class Scp {
     private void upload(Sftp sftp, String source, String sshTarget) {
         File file = new File(source);
         if (file.isFile()) {
-            sftp.put(source, sshTarget);
-            if (debug) {
-                System.out.printf("put %s to %s success\n", source, sshTarget);
-            }
+            put(sftp, source, sshTarget);
         } else {
             File[] listFiles = file.listFiles();
             if (listFiles != null && listFiles.length > 0) {
@@ -398,5 +424,33 @@ public class Scp {
                 }
             }
         }
+    }
+
+    class ProgressMonitor implements SftpProgressMonitor {
+        private long max = 0, count = 0;
+        private String src, dest;
+
+        @Override
+        public void init(int op, String src, String dest, long max) {
+            this.src = src;
+            this.dest = dest;
+            this.max = max;
+        }
+
+        @Override
+        public boolean count(long count) {
+            this.count += count;
+            if (debug || RandomUtil.randomBoolean()) {
+                System.out.printf("%s ==> %s == %s/%s = %s%%\n", this.src, this.dest, this.count, this.max,
+                        this.count * 100 / this.max);
+            }
+            return true;
+        }
+
+        @Override
+        public void end() {
+
+        }
+
     }
 }
