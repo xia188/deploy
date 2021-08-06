@@ -1,0 +1,2 @@
+# second minute hour day month week shell [args]
+6 6 6 * * * sh sonar.sh

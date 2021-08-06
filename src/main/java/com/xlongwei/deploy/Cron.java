@@ -1,5 +1,8 @@
 package com.xlongwei.deploy;
 
+import java.io.File;
+import java.util.List;
+
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
@@ -12,6 +15,7 @@ import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.OS;
 import org.apache.commons.exec.PumpStreamHandler;
 
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
@@ -47,7 +51,8 @@ public class Cron {
             jCommander.usage();
         } else {
             System.out.printf("%s %s\n", shell, cron);
-            CronUtil.schedule(cron, new ShellTask());
+            CronUtil.schedule(cron, new ShellTask(shell, timeout));
+            crontab();
             CronUtil.setMatchSecond(true);
             CronUtil.start();
             RuntimeUtil.addShutdownHook(() -> {
@@ -57,10 +62,48 @@ public class Cron {
         }
     }
 
-    public class ShellTask implements Task {
+    private void crontab() {
+        File crontab = new File("crontab");
+        if (crontab.exists()) {
+            List<String> lines = FileUtil.readUtf8Lines(crontab);
+            lines.forEach(line -> {
+                if (!line.startsWith("#")) {
+                    int spacePos = 0, spaceSplit = 6, spaceFound = 0;
+                    for (int i = 0, len = line.length(); i < len; i++) {
+                        if (Character.isWhitespace(line.charAt(i))) {
+                            spaceFound++;
+                            if (spaceFound >= spaceSplit) {
+                                spacePos = i;
+                                break;
+                            }
+                        }
+                    }
+                    if (spaceFound >= spaceSplit) {
+                        String cron = line.substring(0, spacePos);
+                        String shell = line.substring(spacePos + 1);
+                        System.out.printf("%s %s\n", shell, cron);
+                        CronUtil.schedule(cron, new ShellTask(shell, timeout));
+                    } else {
+                        System.out.printf("bad crontab %s\n", line);
+                    }
+                }
+            });
+        } else {
+            String cron = "6 6 6 * * *";
+            String shell = "sh sonar.sh";
+            CronUtil.schedule(cron, new ShellTask(shell, timeout));
+            System.out.printf("%s %s\n", shell, cron);
+        }
+    }
+
+    public static class ShellTask implements Task {
+        private String shell;
+        private long timeout;
         private CommandLine command;
 
-        public ShellTask() {
+        public ShellTask(String shell, long timeout) {
+            this.shell = shell;
+            this.timeout = timeout;
             this.command = CommandLine.parse(shell);
         }
 

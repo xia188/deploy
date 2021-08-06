@@ -19,7 +19,6 @@ dist
 temp
 logs
 node_modules
-*.sh
 *.tgz
 *.iml
 *.ipr
