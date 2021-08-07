@@ -50,15 +50,25 @@ public class Cron {
         if (help || StrUtil.isAllBlank(shell)) {
             jCommander.usage();
         } else {
-            System.out.printf("%s %s\n", shell, cron);
-            CronUtil.schedule(cron, new ShellTask(shell, timeout));
+            System.out.printf("%s %s\n", cron, shell);
+            if (!shell.contains("auto.sh") || new File("auto.sh").exists()) {
+                CronUtil.schedule(cron, new ShellTask(shell, timeout));
+            } else {
+                System.out.printf("auto.sh not exist\n");
+            }
             crontab();
             CronUtil.setMatchSecond(true);
             CronUtil.start();
-            RuntimeUtil.addShutdownHook(() -> {
+            Runnable stop = () -> {
                 CronUtil.stop();
                 System.out.println("cron stop");
-            });
+            };
+            if (CronUtil.getScheduler().getTaskTable().isEmpty()) {
+                System.out.printf("cron is empty\n");
+                stop.run();
+            } else {
+                RuntimeUtil.addShutdownHook(stop);
+            }
         }
     }
 
@@ -81,7 +91,7 @@ public class Cron {
                     if (spaceFound >= spaceSplit) {
                         String cron = line.substring(0, spacePos);
                         String shell = line.substring(spacePos + 1);
-                        System.out.printf("%s %s\n", shell, cron);
+                        System.out.printf("%s %s\n", cron, shell);
                         CronUtil.schedule(cron, new ShellTask(shell, timeout));
                     } else {
                         System.out.printf("bad crontab %s\n", line);
@@ -91,8 +101,12 @@ public class Cron {
         } else {
             String cron = "6 6 6 * * *";
             String shell = "sh sonar.sh";
-            CronUtil.schedule(cron, new ShellTask(shell, timeout));
-            System.out.printf("%s %s\n", shell, cron);
+            System.out.printf("%s %s\n", cron, shell);
+            if (new File("sonar.sh").exists()) {
+                CronUtil.schedule(cron, new ShellTask(shell, timeout));
+            } else {
+                System.out.printf("sonar.sh not exist\n");
+            }
         }
     }
 
