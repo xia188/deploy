@@ -4,6 +4,7 @@ services=(
     order
     person
 )
+echo "`date +%F` auto deploy"
 for ((i = 0; i < ${#services[@]}; ++i)); do
 
     service=${services[i]}
@@ -12,11 +13,11 @@ for ((i = 0; i < ${#services[@]}; ++i)); do
     lines=`svn up cmp_${service}|wc -l`
     # cd cmp_${service} && lines=`git pull origin master|wc -l` && cd ..
     if [ $lines -gt 2 ] ; then
-        echo "`date +"%Y-%m-%d %H:%M:%S"` $service do deploy"
+        echo "`date +%T` $service do deploy"
         sh deploys.sh $service
-        echo "`date +"%Y-%m-%d %H:%M:%S"` $service end deploy"
+        echo "`date +%T` $service end deploy"
     else
-        echo "`date +"%Y-%m-%d %H:%M:%S"` $service no change"
+        echo "`date +%T` $service no change"
     fi
 
 done

@@ -64,7 +64,9 @@ public class Cron {
                 System.out.println("cron stop");
             };
             if (CronUtil.getScheduler().getTaskTable().isEmpty()) {
-                System.out.printf("cron is empty\n");
+                System.out.printf("cron is empty, please execute the following two commands.\n");
+                System.out.printf("jar xvf deploy.jar config\n");
+                System.out.printf("cp config/* ./ && rm -rf config/\n");
                 stop.run();
             } else {
                 RuntimeUtil.addShutdownHook(stop);

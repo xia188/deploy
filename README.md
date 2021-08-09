@@ -32,3 +32,12 @@ mvn clean compile resources:resources jar:jar
 mvn dependency:copy-dependencies -DoutputDirectory=target
 jscp --sync target tomcat@10.7.128.28:/home/tomcat/code/cmp_order
 ```
+
+#### 自动部署
+```
+配置SSHPASS，修改init.sh、deploy.sh之后，手动部署成功，即可jcron启动自动部署
+修改auto.sh，可以配置哪些服务需要自动部署
+修改deploys.sh，可以配置各个服务需要部署到哪些namespace和ip
+修改start.sh，可以配置统一日志logback.xml，nacos地址，jvm参数
+sonar.sh，支持每天执行一次代码检查，搭一个sonarqube服务即可
+```
