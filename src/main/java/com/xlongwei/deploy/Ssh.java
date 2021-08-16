@@ -10,6 +10,7 @@ import com.beust.jcommander.Parameter;
 import com.jcraft.jsch.Session;
 
 import cn.hutool.core.convert.Convert;
+import cn.hutool.core.swing.clipboard.ClipboardUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.ssh.JschUtil;
@@ -33,6 +34,9 @@ public class Ssh {
     @Parameter(names = { "--help", "-h", "--info" }, description = "print Usage info")
     boolean help = false;
 
+    @Parameter(names = { "--copy", "-c" }, description = "copy ENV SSHPASS")
+    boolean copy = false;
+
     @Parameter(description = "destination command")
     List<String> args;
 
@@ -46,7 +50,10 @@ public class Ssh {
     }
 
     public void run(JCommander jCommander) {
-        if (help || StrUtil.isAllBlank(passwd, identityFile) || args == null || args.size() != 2) {
+        if (copy && StrUtil.isNotBlank(passwd)) {
+            ClipboardUtil.setStr(passwd);
+            System.out.println("passwd copied");
+        } else if (help || StrUtil.isAllBlank(passwd, identityFile) || args == null || args.size() != 2) {
             jCommander.usage();
         } else {
             String destination = args.get(0);
