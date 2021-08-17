@@ -1,0 +1,19 @@
+@host=http://localhost:9881
+###
+GET {{host}}/
+###
+POST {{host}}/deploy
+
+deploy=
+### deploy=namespace service ip
+POST {{host}}/deploy
+
+deploy=dev order 24
+### deploys=service
+POST {{host}}/deploy
+
+deploys=order
+### deploys=order dev=24-26;dat=29,30,31
+POST {{host}}/deploy
+
+deploys=order

@@ -1,6 +1,10 @@
 package com.xlongwei.deploy;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import com.beust.jcommander.JCommander;
@@ -16,11 +20,17 @@ import org.apache.commons.exec.OS;
 import org.apache.commons.exec.PumpStreamHandler;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.cron.CronUtil;
 import cn.hutool.cron.task.Task;
+import cn.hutool.http.server.HttpServerRequest;
+import cn.hutool.http.server.HttpServerResponse;
+import cn.hutool.http.server.SimpleServer;
+import cn.hutool.http.server.action.Action;
 
 /**
  * jcron --cron "* * * * * *" --shell "pwd"
@@ -34,10 +44,18 @@ public class Cron {
     String cron = StrUtil.blankToDefault(System.getenv("SSHCRON"), "3 */5 * * * *");
 
     @Parameter(names = { "--timeout", "-t" }, description = "timeout")
-    long timeout = 120000;
+    static long timeout = 120000;
 
     @Parameter(names = { "--help", "-h", "--info" }, description = "print Usage info")
     boolean help = false;
+
+    @Parameter(names = { "--web", "-w", "--ui" }, description = "start web ui")
+    boolean web = false;
+
+    @Parameter(names = { "--port", "-p" }, description = "http port")
+    int port = 9881;
+
+    static List<String> outputs = null;
 
     public static void main(String[] args) {
         Cron main = new Cron();
@@ -63,7 +81,10 @@ public class Cron {
                 CronUtil.stop();
                 System.out.println("cron stop");
             };
-            if (CronUtil.getScheduler().getTaskTable().isEmpty()) {
+            if (web) {
+                web();
+            }
+            if (CronUtil.getScheduler().getTaskTable().isEmpty() && web == false) {
                 System.out.printf("cron is empty, please execute the following two commands.\n");
                 System.out.printf("jar xvf deploy.jar config\n");
                 System.out.printf("cp config/* ./ && rm -rf config/\n");
@@ -72,6 +93,14 @@ public class Cron {
                 RuntimeUtil.addShutdownHook(stop);
             }
         }
+    }
+
+    private void web() {
+        SimpleServer server = new SimpleServer(port);
+        server.addAction("/", new HtmlAction("webapp/index.html"));
+        server.addAction("/deploy", new ShellAction());
+        server.start();
+        System.out.printf("web started at http://localhost:%s/\n", port);
     }
 
     private void crontab() {
@@ -135,8 +164,12 @@ public class Cron {
                 LogOutputStream outAndErr = new LogOutputStream() {
                     @Override
                     protected void processLine(String line, int logLevel) {
-                        System.out.println(new String(line.getBytes(),
-                                OS.isFamilyWindows() ? CharsetUtil.CHARSET_GBK : CharsetUtil.CHARSET_UTF_8));
+                        String output = new String(line.getBytes(),
+                                OS.isFamilyWindows() ? CharsetUtil.CHARSET_GBK : CharsetUtil.CHARSET_UTF_8);
+                        System.out.println(output);
+                        if (outputs != null) {
+                            outputs.add(output);
+                        }
                     }
                 };
                 ExecuteStreamHandler streamHandler = new PumpStreamHandler(outAndErr);
@@ -156,5 +189,141 @@ public class Cron {
             }
         }
 
+    }
+
+    public static class HtmlAction implements Action {
+        private String resource;
+
+        public HtmlAction(String resource) {
+            this.resource = resource;
+        }
+
+        @Override
+        public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
+            response.setContentType("text/html");
+            response.write(utf8String(resource));
+        }
+
+        public static String utf8String(String resource) {
+            try (InputStream in = ResourceUtil.getResourceObj(resource).getStream()) {
+                return IoUtil.readUtf8(in);
+            } catch (Exception e) {
+                return e.getMessage();
+            }
+        }
+    }
+
+    public static class ShellAction implements Action {
+
+        @Override
+        public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
+            String deploy = request.getParam("deploy");
+            String deploys = request.getParam("deploys");
+            boolean test = "true".equals(request.getParam("test"));
+            String shell = null;
+            if (StrUtil.isNotBlank(deploy)) {
+                shell = "sh deploy.sh " + deploy;
+            } else if (StrUtil.isNotBlank(deploys)) {
+                if (deploys.contains(" ")) {
+                    String[] split = deploys.split("[ ]");
+                    List<String> namespaceIps = namespaceIps(split[1]);
+                    if (namespaceIps.size() > 0) {
+                        List<String> lines = deploysLines();
+                        deploysTmp(lines, namespaceIps);
+                        if (test) {
+                            shell = "cat deploys_tmp.sh";
+                        } else {
+                            shell = "sh deploys_tmp.sh " + split[0];
+                        }
+                    }
+                } else {
+                    if (test) {
+                        shell = "cat deploys.sh";
+                    } else {
+                        shell = "sh deploys.sh " + deploys;
+                    }
+                }
+            }
+            if (StrUtil.isBlank(shell) || shell.contains(";")) {
+                shell = "sh deploy.sh";
+            }
+            ShellTask task = new ShellTask(shell, timeout);
+            outputs = new LinkedList<>();
+            task.execute();
+            response.write(String.join(StrUtil.CRLF, outputs));
+            outputs = null;
+        }
+
+        private List<String> deploysLines() {
+            File deploys = new File(".", "deploys.sh");
+            if (deploys.exists()) {
+                return FileUtil.readUtf8Lines(deploys);
+            } else {
+                return FileUtil.readUtf8Lines("config/deploys.sh");
+            }
+        }
+
+        public static void deploysTmp(List<String> lines, List<String> namespaceIps) {
+            List<String> tmps = new ArrayList<>();
+            int caseStart = 0, caseEnd = 0;
+            for (int i = 0, rows = lines.size(); i < rows; i++) {
+                String row = lines.get(i);
+                if (StrUtil.isNotBlank(row)) {
+                    if (row.startsWith("case")) {
+                        caseStart = i;
+                    } else if (row.startsWith("esac")) {
+                        caseEnd = i;
+                    }
+                }
+            }
+            for (int i = 0; i < caseStart; i++) {
+                tmps.add(lines.get(i));
+            }
+            tmps.add("namespaceIps=(");
+            namespaceIps.forEach(line -> {
+                tmps.add(line);
+            });
+            tmps.add(")");
+            for (int i = caseEnd + 1, rows = lines.size(); i < rows; i++) {
+                tmps.add(lines.get(i));
+            }
+            FileUtil.writeUtf8Lines(tmps, new File(".", "deploys_tmp.sh"));
+        }
+
+        public static List<String> namespaceIps(String str) {
+            List<String> namespaceIps = new ArrayList<>();
+            if (StrUtil.isNotBlank(str)) {
+                String[] parts = str.split("[;]");
+                for (String part : parts) {
+                    String[] pair = part.split("[=]");
+                    if (pair == null || pair.length != 2) {
+                        continue;
+                    }
+                    String namespace = pair[0];
+                    int dash = pair[1].indexOf('-'), comma = pair[1].indexOf(',');
+                    if (dash == -1 && comma == -1) {
+                        namespaceIps.add(namespace + "=" + pair[1]);
+                    } else if (dash > 0) {
+                        int dot = pair[1].lastIndexOf('.', dash);
+                        String prefix = dot == -1 ? "" : pair[1].substring(0, dot + 1);
+                        int start = Integer.parseInt(pair[1].substring(prefix.length(), dash)),
+                                end = Integer.parseInt(pair[1].substring(dash + 1));
+                        for (int i = start; i <= end; i++) {
+                            String ip = prefix + i;
+                            namespaceIps.add(namespace + "=" + ip);
+                        }
+                    } else {
+                        int dot = pair[1].lastIndexOf('.', dash);
+                        String prefix = dot == -1 ? "" : pair[1].substring(0, dot + 1);
+                        String[] ips = pair[1].split("[,]");
+                        for (String ip : ips) {
+                            ip = prefix + ip;
+                            namespaceIps.add(namespace + "=" + ip);
+                        }
+                    }
+                }
+            }
+            return namespaceIps;
+        }
     }
 }

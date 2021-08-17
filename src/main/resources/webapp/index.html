@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>deploy</title>
+    <script>
+        function submit() {
+            document.querySelector('button').disabled = 'disabled';
+            let formData = new FormData();
+            let deploy = document.querySelector('input[name="deploy"]').value;
+            let deploys = document.querySelector('input[name="deploys"]').value;
+            let test = document.querySelector('input[name="test"]').checked;
+            formData.append('deploy', deploy);
+            formData.append('deploys', deploys);
+            formData.append('test', test);
+            fetch('/deploy', { method: 'POST', body: formData })
+                .then(response => response.text())
+                .then(text => { document.querySelector('#result').innerText = text; document.querySelector('button').disabled = undefined })
+                .catch(error => console.log(error))
+        }
+    </script>
+</head>
+
+<body>
+    <label>deploy</label>
+    <input name="deploy" placeholder="namespace service ip">
+    <br />
+    <label>deploys</label>
+    <input name="deploys" placeholder="service [namespace=ip,]*">
+    <br />
+    <button onclick="submit()">submit</button>
+    <input type="checkbox" name="test" checked title="test mode">
+    <br />
+    <p id="result"></p>
+</body>
+
+</html>
