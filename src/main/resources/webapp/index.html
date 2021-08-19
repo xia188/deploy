@@ -6,7 +6,9 @@
     <title>deploy</title>
     <script>
         function submit() {
-            document.querySelector('button').disabled = 'disabled';
+            let submitButton = document.querySelector('button');
+            submitButton.disabled = 'disabled';
+            let resultPara = document.querySelector('#result');
             let formData = new FormData();
             let deploy = document.querySelector('input[name="deploy"]').value;
             let deploys = document.querySelector('input[name="deploys"]').value;
@@ -16,8 +18,8 @@
             formData.append('test', test);
             fetch('/deploy', { method: 'POST', body: formData })
                 .then(response => response.text())
-                .then(text => { document.querySelector('#result').innerText = text; document.querySelector('button').disabled = undefined })
-                .catch(error => console.log(error))
+                .then(text => { resultPara.innerText = text; submitButton.disabled = undefined })
+                .catch(error => { console.log(error); resultPara.innerText = 'error'; submitButton.disabled = undefined })
         }
     </script>
 </head>

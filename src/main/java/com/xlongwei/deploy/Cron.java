@@ -228,20 +228,17 @@ public class Cron {
                     String[] split = deploys.split("[ ]");
                     List<String> namespaceIps = namespaceIps(split[1]);
                     if (namespaceIps.size() > 0) {
-                        List<String> lines = deploysLines();
-                        deploysTmp(lines, namespaceIps);
-                        if (test) {
-                            shell = "cat deploys_tmp.sh";
+                        File file = new File(".", "deploys.sh");
+                        if (file.exists()) {
+                            List<String> lines = FileUtil.readUtf8Lines(file);
+                            deploysTmp(lines, namespaceIps);
                         } else {
-                            shell = "sh deploys_tmp.sh " + split[0];
+                            test = true;
                         }
+                        shell = test ? "cat deploys_tmp.sh" : ("sh deploys_tmp.sh " + split[0]);
                     }
                 } else {
-                    if (test) {
-                        shell = "cat deploys.sh";
-                    } else {
-                        shell = "sh deploys.sh " + deploys;
-                    }
+                    shell = test ? "cat deploys.sh" : ("sh deploys.sh " + deploys);
                 }
             }
             if (StrUtil.isBlank(shell) || shell.contains(";")) {
@@ -252,41 +249,23 @@ public class Cron {
             task.execute();
             response.write(String.join(StrUtil.CRLF, outputs));
             outputs = null;
-        }
-
-        private List<String> deploysLines() {
-            File deploys = new File(".", "deploys.sh");
-            if (deploys.exists()) {
-                return FileUtil.readUtf8Lines(deploys);
-            } else {
-                return FileUtil.readUtf8Lines("config/deploys.sh");
-            }
+            new File(".", "deploys_tmp.sh").delete();
         }
 
         public static void deploysTmp(List<String> lines, List<String> namespaceIps) {
             List<String> tmps = new ArrayList<>();
-            int caseStart = 0, caseEnd = 0;
-            for (int i = 0, rows = lines.size(); i < rows; i++) {
-                String row = lines.get(i);
-                if (StrUtil.isNotBlank(row)) {
-                    if (row.startsWith("case")) {
-                        caseStart = i;
-                    } else if (row.startsWith("esac")) {
-                        caseEnd = i;
+            lines.forEach(line -> {
+                if (StrUtil.isNotBlank(line)) {
+                    if (line.startsWith("for ")) {
+                        tmps.add("namespaceIps=(");
+                        namespaceIps.forEach(namespaceIp -> {
+                            tmps.add(namespaceIp);
+                        });
+                        tmps.add(")");
                     }
                 }
-            }
-            for (int i = 0; i < caseStart; i++) {
-                tmps.add(lines.get(i));
-            }
-            tmps.add("namespaceIps=(");
-            namespaceIps.forEach(line -> {
                 tmps.add(line);
             });
-            tmps.add(")");
-            for (int i = caseEnd + 1, rows = lines.size(); i < rows; i++) {
-                tmps.add(lines.get(i));
-            }
             FileUtil.writeUtf8Lines(tmps, new File(".", "deploys_tmp.sh"));
         }
 
