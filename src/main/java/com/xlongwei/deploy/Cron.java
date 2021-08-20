@@ -315,7 +315,7 @@ public class Cron {
         public static String deploy(String deploy, String deploys, boolean test) {
             String shell = null;
             if (StrUtil.isNotBlank(deploy)) {
-                shell = "sh deploy.sh " + deploy;
+                shell = test ? "cat deploy.sh" : "sh deploy.sh " + deploy;
             } else if (StrUtil.isNotBlank(deploys)) {
                 if (deploys.contains(" ")) {
                     String[] split = deploys.split("[ ]");
@@ -335,7 +335,7 @@ public class Cron {
                 }
             }
             if (StrUtil.isBlank(shell) || shell.contains(";")) {
-                shell = "sh deploy.sh";
+                shell = test ? "cat deploy.sh" : "sh deploy.sh";
             }
             ShellTask task = new ShellTask(shell, timeout);
             outputs = new LinkedList<>();

@@ -29,7 +29,12 @@ person) namespaceIps=(
 esac
 
 cd cmp_${service}
+svn cleanup
+lines=`svn up|wc -l`
 mvn clean compile resources:resources jar:jar
+if [ $lines -gt 2 ] ; then
+  svn up -r PREV
+fi
 [ ! -e "~/.bashrc" ] && source ~/.bashrc
 for ((i = 0; i < ${#namespaceIps[@]}; ++i)); do
 
