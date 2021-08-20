@@ -109,8 +109,7 @@ public class Cron {
                 stop.run();
             } else {
                 RuntimeUtil.addShutdownHook(stop);
-                boolean longpolling = StrUtil.isNotBlank(host) && host.startsWith("http")
-                        && (!host.contains("localhost") || web);
+                boolean longpolling = StrUtil.isNotBlank(host) && host.startsWith("http") && StrUtil.isNotBlank(key);
                 if (longpolling || web) {
                     scheduledExecutorService = ThreadUtil.createScheduledExecutor(2);
                 }

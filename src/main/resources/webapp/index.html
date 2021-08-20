@@ -20,7 +20,7 @@
             formData.append('test', test);
             fetch('/deploy', { method: 'POST', body: formData })
                 .then(response => response.text())
-                .then(text => { resultPara.innerText = text; submitButton.disabled = undefined })
+                .then(text => { resultPara.innerText = text; if (!key) submitButton.disabled = undefined })
                 .catch(error => { console.log(error); resultPara.innerText = 'error'; submitButton.disabled = undefined })
             if (!!key) {
                 fetch('/deploy?key=' + key + '.result', { method: 'GET' })
