@@ -72,7 +72,6 @@ public class Cron {
     @Parameter(names = { "--lp.key" }, description = "long polling key")
     String key = "deploy";
 
-    static List<String> outputs = null;
     static ScheduledExecutorService scheduledExecutorService;
 
     public static void main(String[] args) {
@@ -194,6 +193,7 @@ public class Cron {
         private String shell;
         private long timeout;
         private CommandLine command;
+        public List<String> outputs = null;
 
         public ShellTask(String shell, long timeout) {
             this.shell = shell;
@@ -338,10 +338,9 @@ public class Cron {
                 shell = test ? "cat deploy.sh" : "sh deploy.sh";
             }
             ShellTask task = new ShellTask(shell, timeout);
-            outputs = new LinkedList<>();
+            task.outputs = new LinkedList<>();
             task.execute();
-            String result = String.join(StrUtil.CRLF, outputs);
-            outputs = null;
+            String result = String.join(StrUtil.CRLF, task.outputs);
             new File(".", "deploys_tmp.sh").delete();
             return result;
         }
