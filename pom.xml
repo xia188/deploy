@@ -11,6 +11,7 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.test.skip>true</maven.test.skip>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.main.class>com.xlongwei.deploy.Cron</project.main.class>
   </properties>
   <dependencies>
     <dependency>
@@ -43,6 +44,18 @@
   <build>
     <finalName>${artifactId}</finalName>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>${project.main.class}</mainClass>
+              <addClasspath>true</addClasspath>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>

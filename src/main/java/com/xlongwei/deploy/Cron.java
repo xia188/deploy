@@ -129,7 +129,7 @@ public class Cron {
             int status = execute.getStatus();
             // System.out.printf("long pooling status = %s\n", status);
             if (HttpStatus.HTTP_NOT_MODIFIED == status) {
-
+                // will try again
             } else if (HttpStatus.HTTP_OK == status) {
                 String body = execute.body();
                 System.out.printf("long pooling body = %s\n", body);
@@ -272,7 +272,7 @@ public class Cron {
             String deploy = request.getParam("deploy");
             String deploys = request.getParam("deploys");
             boolean test = "true".equals(request.getParam("test"));
-            if (key != null) {
+            if (StrUtil.isNotBlank(key)) {
                 SynchronousQueue<String> queue = null;
                 synchronized (map) {
                     queue = map.get(key);
