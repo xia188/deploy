@@ -4,8 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.TimeUnit;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -22,15 +27,21 @@ import org.apache.commons.exec.PumpStreamHandler;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.cron.CronUtil;
 import cn.hutool.cron.task.Task;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpStatus;
 import cn.hutool.http.server.HttpServerRequest;
 import cn.hutool.http.server.HttpServerResponse;
 import cn.hutool.http.server.SimpleServer;
 import cn.hutool.http.server.action.Action;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 
 /**
  * jcron --cron "* * * * * *" --shell "pwd"
@@ -55,7 +66,14 @@ public class Cron {
     @Parameter(names = { "--port", "-p" }, description = "http port")
     int port = 9881;
 
+    @Parameter(names = { "--lp.host" }, description = "long polling host, 'none' to disable")
+    String host = "http://localhost:" + port;
+
+    @Parameter(names = { "--lp.key" }, description = "long polling key")
+    String key = "deploy";
+
     static List<String> outputs = null;
+    static ScheduledExecutorService scheduledExecutorService;
 
     public static void main(String[] args) {
         Cron main = new Cron();
@@ -91,8 +109,40 @@ public class Cron {
                 stop.run();
             } else {
                 RuntimeUtil.addShutdownHook(stop);
+                boolean longpolling = StrUtil.isNotBlank(host) && host.startsWith("http")
+                        && (!host.contains("localhost") || web);
+                if (longpolling || web) {
+                    scheduledExecutorService = ThreadUtil.createScheduledExecutor(2);
+                }
+                if (longpolling) {
+                    longpooling();
+                }
             }
         }
+    }
+
+    // https://mp.weixin.qq.com/s/YjvL0sUTGHxR3GJFqrP8qg
+    private void longpooling() {
+        System.out.println("enable long polling...");
+        String url = host + "/deploy?key=" + key;
+        scheduledExecutorService.scheduleWithFixedDelay(() -> {
+            // 客户端超时时间要大于长轮询约定的超时时间
+            HttpResponse execute = HttpRequest.get(url).timeout(40000).execute();
+            int status = execute.getStatus();
+            // System.out.printf("long pooling status = %s\n", status);
+            if (HttpStatus.HTTP_NOT_MODIFIED == status) {
+
+            } else if (HttpStatus.HTTP_OK == status) {
+                String body = execute.body();
+                System.out.printf("long pooling body = %s\n", body);
+                JSONObject json = JSONUtil.parseObj(body);
+                String deploy = json.getStr("deploy");
+                String deploys = json.getStr("deploys");
+                boolean test = json.getBool("test", Boolean.TRUE);
+                String result = ShellAction.deploy(deploy, deploys, test);
+                HttpRequest.post(url + ".result").form("result", result).execute();
+            }
+        }, 1, 1, TimeUnit.SECONDS);
     }
 
     private void web() {
@@ -214,12 +264,56 @@ public class Cron {
     }
 
     public static class ShellAction implements Action {
+        private Map<String, SynchronousQueue<String>> map = new HashMap<>();
 
         @Override
         public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
+            String key = request.getParam("key");
+            String result = request.getParam("result");
             String deploy = request.getParam("deploy");
             String deploys = request.getParam("deploys");
             boolean test = "true".equals(request.getParam("test"));
+            if (key != null) {
+                SynchronousQueue<String> queue = null;
+                synchronized (map) {
+                    queue = map.get(key);
+                    if (queue == null) {
+                        queue = new SynchronousQueue<>();
+                        map.put(key, queue);
+                    }
+                }
+                String json = null;
+                if (request.isGetMethod()) {
+                    try {
+                        json = queue.poll(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    if (json == null) {
+                        response.send(HttpStatus.HTTP_NOT_MODIFIED);
+                    } else {
+                        response.write(json);
+                    }
+                } else {
+                    if (StrUtil.isNotBlank(result)) {
+                        json = new JSONObject().set("result", result).toString();
+                    } else {
+                        json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
+                                .toString();
+                    }
+                    queue.offer(json);
+                    scheduledExecutorService.schedule(() -> {
+                        map.get(key).poll();
+                    }, 30000, TimeUnit.SECONDS);
+                    response.write(json);
+                }
+            } else {
+                result = deploy(deploy, deploys, test);
+                response.write(result);
+            }
+        }
+
+        public static String deploy(String deploy, String deploys, boolean test) {
             String shell = null;
             if (StrUtil.isNotBlank(deploy)) {
                 shell = "sh deploy.sh " + deploy;
@@ -247,9 +341,10 @@ public class Cron {
             ShellTask task = new ShellTask(shell, timeout);
             outputs = new LinkedList<>();
             task.execute();
-            response.write(String.join(StrUtil.CRLF, outputs));
+            String result = String.join(StrUtil.CRLF, outputs);
             outputs = null;
             new File(".", "deploys_tmp.sh").delete();
+            return result;
         }
 
         public static void deploysTmp(List<String> lines, List<String> namespaceIps) {

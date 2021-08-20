@@ -10,9 +10,11 @@
             submitButton.disabled = 'disabled';
             let resultPara = document.querySelector('#result');
             let formData = new FormData();
+            let key = document.querySelector('input[name="key"]').value;
             let deploy = document.querySelector('input[name="deploy"]').value;
             let deploys = document.querySelector('input[name="deploys"]').value;
             let test = document.querySelector('input[name="test"]').checked;
+            formData.append('key', key);
             formData.append('deploy', deploy);
             formData.append('deploys', deploys);
             formData.append('test', test);
@@ -20,11 +22,20 @@
                 .then(response => response.text())
                 .then(text => { resultPara.innerText = text; submitButton.disabled = undefined })
                 .catch(error => { console.log(error); resultPara.innerText = 'error'; submitButton.disabled = undefined })
+            if (!!key) {
+                fetch('/deploy?key=' + key + '.result', { method: 'GET' })
+                    .then(response => response.json())
+                    .then(json => { resultPara.innerText = json.result; submitButton.disabled = undefined })
+                    .catch(error => { console.log(error); resultPara.innerText = 'error'; submitButton.disabled = undefined })
+            }
         }
     </script>
 </head>
 
 <body>
+    <label>key</label>
+    <input name="key" placeholder="deploy">
+    <br />
     <label>deploy</label>
     <input name="deploy" placeholder="namespace service ip">
     <br />
