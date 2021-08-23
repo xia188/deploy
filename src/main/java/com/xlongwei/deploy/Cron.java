@@ -60,14 +60,17 @@ public class Cron {
     @Parameter(names = { "--help", "-h", "--info" }, description = "print Usage info")
     boolean help = false;
 
+    @Parameter(names = { "--debug", "-d" }, description = "Debug mode")
+    static boolean debug = false;
+
     @Parameter(names = { "--web", "-w", "--ui" }, description = "start web ui")
     boolean web = false;
 
-    @Parameter(names = { "--port", "-p" }, description = "http port")
+    @Parameter(names = { "--port", "-p" }, description = "web http port")
     int port = 9881;
 
-    @Parameter(names = { "--lp.host" }, description = "long polling host, 'none' to disable")
-    String host = "http://localhost:" + port;
+    @Parameter(names = { "--lp.host" }, description = "long polling host, ex: http://localhost:9881")
+    String host = "";
 
     @Parameter(names = { "--lp.key" }, description = "long polling key")
     String key = "deploy";
@@ -127,12 +130,16 @@ public class Cron {
             // 客户端超时时间要大于长轮询约定的超时时间
             HttpResponse execute = HttpRequest.get(url).timeout(40000).execute();
             int status = execute.getStatus();
-            // System.out.printf("long pooling status = %s\n", status);
+            if (debug) {
+                System.out.printf("long pooling status = %s\n", status);
+            }
             if (HttpStatus.HTTP_NOT_MODIFIED == status) {
                 // will try again
             } else if (HttpStatus.HTTP_OK == status) {
                 String body = execute.body();
-                System.out.printf("long pooling body = %s\n", body);
+                if(debug){
+                    System.out.printf("long pooling get json = %s\n", body);
+                }
                 JSONObject json = JSONUtil.parseObj(body);
                 String deploy = json.getStr("deploy");
                 String deploys = json.getStr("deploys");
@@ -253,12 +260,20 @@ public class Cron {
             response.write(utf8String(resource));
         }
 
+        static Map<String, String> resources = debug ? null : new HashMap<>();
         public static String utf8String(String resource) {
-            try (InputStream in = ResourceUtil.getResourceObj(resource).getStream()) {
-                return IoUtil.readUtf8(in);
-            } catch (Exception e) {
-                return e.getMessage();
+            String html = debug ? null : resources.get(resource);
+            if (StrUtil.isBlank(html)) {
+                try (InputStream in = ResourceUtil.getResourceObj(resource).getStream()) {
+                    html = IoUtil.readUtf8(in);
+                } catch (Exception e) {
+                    html = e.getMessage();
+                }
+                if (debug == false) {
+                    resources.put(resource, html);
+                }
             }
+            return html;
         }
     }
 

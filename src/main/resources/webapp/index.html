@@ -1,9 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 
 <head>
     <meta charset="utf-8">
     <title>deploy</title>
+    <style>
+        label {
+            width: 10%;
+            text-align: right;
+            display: inline-block;
+        }
+
+        input {
+            width: 80%;
+            height: 27px;
+            margin: 7px;
+        }
+    </style>
     <script>
         function submit() {
             let submitButton = document.querySelector('button');
@@ -46,8 +59,9 @@
     <label>deploys</label>
     <input name="deploys" placeholder="service [namespace=ip,]*">
     <br />
-    <button onclick="submit()">submit</button>
-    <input type="checkbox" name="test" checked title="test mode">
+    <label></label>
+    <button onclick="submit()" style="font-size: 18px;">submit</button>
+    <input type="checkbox" name="test" checked title="test mode" style="width: auto; vertical-align: middle;">
     <br />
     <p id="result"></p>
 </body>

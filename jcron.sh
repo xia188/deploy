@@ -1,14 +1,13 @@
 #!/bin/sh
 
-daemon=false
+daemon=true
 appname=deploy
 jarfile=target/$appname.jar
 [ ! -e "$jarfile" ] && jarfile=$appname.jar
 Survivor=1 Old=8 NewSize=$[Survivor*10] Xmx=$[NewSize+Old] #NewSize=Survivor*(1+1+8) Xmx=NewSize+Old
 JVM_OPS="-Xmx${Xmx}m -Xms${Xmx}m -XX:NewSize=${NewSize}m -XX:MaxNewSize=${NewSize}m -XX:SurvivorRatio=8 -Xss228k"
 JVM_OPS="$JVM_OPS -Djava.compiler=none"
-ARGS="$ARGS --web --port 9881"
-ARGS="$ARGS --lp.host none"
+ARGS="$ARGS --web"
 # ARGS="$ARGS --lp.host https://deploy.xlongwei.com --lp key deploy"
 #JVM_OPS="$JVM_OPS -Xdebug -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=n"
 #ENV_OPS="$ENV_OPS PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
