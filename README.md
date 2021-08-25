@@ -41,3 +41,12 @@ jscp --sync target tomcat@10.7.128.28:/home/tomcat/code/cmp_order
 修改start.sh，可以配置统一日志logback.xml，nacos地址，jvm参数
 sonar.sh，支持每天执行一次代码检查，搭一个sonarqube服务即可
 ```
+
+#### 远程操作
+```
+//外网部署，或直接使用https://deploy.xlongwei.com/
+jcron --web
+//内网部署：key是密钥，避免泄露
+jcron --lp.host=https://deploy.xlongwei.com/ --lp.key=xlongwei
+```
+![deploy](https://t.xlongwei.com/images/deploy/deploy.png)
