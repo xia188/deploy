@@ -3,6 +3,7 @@ package com.xlongwei.deploy;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -152,7 +153,7 @@ public class Cron {
 
     private void web() {
         SimpleServer server = new SimpleServer(port);
-        server.addAction("/", new HtmlAction("webapp/index.html"));
+        server.addAction("/", new HtmlAction());
         server.addAction("/deploy", new ShellAction());
         server.start();
         System.out.printf("web started at http://localhost:%s/\n", port);
@@ -248,26 +249,30 @@ public class Cron {
     }
 
     public static class HtmlAction implements Action {
-        private String resource;
-
-        public HtmlAction(String resource) {
-            this.resource = resource;
-        }
 
         @Override
         public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
-            response.setContentType("text/html");
-            response.write(utf8String(resource));
+            String path = request.getPath();
+            if (StrUtil.isBlank(path) || "/".equals(path)) {
+                path = "/index.html";
+            }
+            String resource = "webapp" + path;
+            boolean html = resource.endsWith(".html");
+            String contentType = html ? "text/html; charset=utf-8" : "image/x-icon";
+            response.addHeader("x-content-type-options", "nosniff");
+            response.addHeader("cache-control", html && debug ? "no-cache" : "max-age=31536000, immutable");
+            response.write(bytes(resource), contentType);
         }
 
-        static Map<String, String> resources = debug ? null : new HashMap<>();
-        public static String utf8String(String resource) {
-            String html = debug ? null : resources.get(resource);
-            if (StrUtil.isBlank(html)) {
+        static Map<String, byte[]> resources = debug ? null : new HashMap<>();
+
+        public static byte[] bytes(String resource) {
+            byte[] html = debug ? null : resources.get(resource);
+            if (html == null) {
                 try (InputStream in = ResourceUtil.getResourceObj(resource).getStream()) {
-                    html = IoUtil.readUtf8(in);
+                    html = IoUtil.readBytes(in);
                 } catch (Exception e) {
-                    html = e.getMessage();
+                    html = e.getMessage().getBytes(StandardCharsets.UTF_8);
                 }
                 if (debug == false) {
                     resources.put(resource, html);
