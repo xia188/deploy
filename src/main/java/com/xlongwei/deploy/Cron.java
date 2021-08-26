@@ -335,11 +335,14 @@ public class Cron {
                         json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
                                 .toString();
                     }
-                    queue.poll();
-                    queue.offer(json);
                     scheduledExecutorService.schedule(() -> {
                         map.get(key).poll();
-                    }, 30, TimeUnit.SECONDS);
+                    }, 31, TimeUnit.SECONDS);
+                    try {
+                        queue.offer(json, 29, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
                     response.write(json);
                 }
             } else {
