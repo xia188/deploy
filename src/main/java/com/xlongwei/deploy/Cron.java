@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -71,7 +72,7 @@ public class Cron {
     int port = 9881;
 
     @Parameter(names = { "--lp.host" }, description = "long polling host, ex: http://localhost:9881")
-    String host = "";
+    static String host = "";
 
     @Parameter(names = { "--lp.key" }, description = "long polling key")
     String key = "deploy";
@@ -99,6 +100,9 @@ public class Cron {
             CronUtil.setMatchSecond(true);
             CronUtil.start();
             Runnable stop = () -> {
+                if (scheduledExecutorService != null) {
+                    scheduledExecutorService.shutdown();
+                }
                 CronUtil.stop();
                 System.out.println("cron stop");
             };
@@ -128,27 +132,37 @@ public class Cron {
         System.out.println("enable long polling...");
         String url = host + "/deploy?key=" + key;
         scheduledExecutorService.scheduleWithFixedDelay(() -> {
-            // 客户端超时时间要大于长轮询约定的超时时间
-            HttpResponse execute = HttpRequest.get(url).timeout(40000).execute();
-            int status = execute.getStatus();
-            if (debug) {
-                System.out.printf("long pooling status = %s\n", status);
-            }
-            if (HttpStatus.HTTP_NOT_MODIFIED == status) {
-                // will try again
-            } else if (HttpStatus.HTTP_OK == status) {
-                String body = execute.body();
-                if(debug){
-                    System.out.printf("long pooling get json = %s\n", body);
+            try {
+                // 客户端超时时间要大于长轮询约定的超时时间
+                if (debug) {
+                    System.out.printf("long pooling start = %s\n", LocalDateTime.now());
                 }
-                JSONObject json = JSONUtil.parseObj(body);
-                String deploy = json.getStr("deploy");
-                String deploys = json.getStr("deploys");
-                boolean test = json.getBool("test", Boolean.TRUE);
-                String result = ShellAction.deploy(deploy, deploys, test);
-                HttpRequest.post(url + ".result").form("result", result).execute();
+                HttpResponse execute = HttpRequest.get(url).timeout(31000).execute();
+                int status = execute.getStatus();
+                if (debug) {
+                    System.out.printf("long pooling status = %s\n", status);
+                }
+                if (HttpStatus.HTTP_NOT_MODIFIED == status) {
+                    // will try again
+                } else if (HttpStatus.HTTP_OK == status) {
+                    String body = execute.body();
+                    if (debug) {
+                        System.out.printf("long pooling get json = %s\n", body);
+                    }
+                    JSONObject json = JSONUtil.parseObj(body);
+                    String deploy = json.getStr("deploy");
+                    String deploys = json.getStr("deploys");
+                    boolean test = json.getBool("test", Boolean.TRUE);
+                    String result = ShellAction.deploy(deploy, deploys, test);
+                    execute = HttpRequest.post(url + ".result").form("result", result).execute();
+                    if (debug) {
+                        System.out.printf("long pooling result = %s\n", execute.getStatus());
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
             }
-        }, 1, 1, TimeUnit.SECONDS);
+        }, 1, 1, TimeUnit.MILLISECONDS);
     }
 
     private void web() {
@@ -243,6 +257,7 @@ public class Cron {
                 }
             } catch (Exception e) {
                 System.out.println(e.getMessage());
+                ThreadUtil.safeSleep(1000);
             }
         }
 
@@ -304,9 +319,9 @@ public class Cron {
                 String json = null;
                 if (request.isGetMethod()) {
                     try {
-                        json = queue.poll(30, TimeUnit.SECONDS);
+                        json = queue.poll(29, TimeUnit.SECONDS);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        System.out.println(e.getMessage());
                     }
                     if (json == null) {
                         response.send(HttpStatus.HTTP_NOT_MODIFIED);
@@ -323,10 +338,13 @@ public class Cron {
                     queue.offer(json);
                     scheduledExecutorService.schedule(() -> {
                         map.get(key).poll();
-                    }, 30000, TimeUnit.SECONDS);
+                    }, 30, TimeUnit.SECONDS);
                     response.write(json);
                 }
             } else {
+                if (StrUtil.isNotBlank(host)) {
+                    test = true;// 使用长轮询绕路时，可用lp.key自我保护
+                }
                 result = deploy(deploy, deploys, test);
                 response.write(result);
             }
