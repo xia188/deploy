@@ -108,14 +108,14 @@ public class Cron {
             if (web) {
                 web();
             }
-            if (CronUtil.getScheduler().getTaskTable().isEmpty() && web == false) {
+            boolean longpolling = StrUtil.isNotBlank(host) && host.startsWith("http") && StrUtil.isNotBlank(key);
+            if (CronUtil.getScheduler().getTaskTable().isEmpty() && web == false && longpolling == false) {
                 System.out.printf("cron is empty, please execute the following two commands.\n");
                 System.out.printf("jar xvf deploy.jar config\n");
                 System.out.printf("cp config/* ./ && rm -rf config/\n");
                 stop.run();
             } else {
                 RuntimeUtil.addShutdownHook(stop);
-                boolean longpolling = StrUtil.isNotBlank(host) && host.startsWith("http") && StrUtil.isNotBlank(key);
                 if (longpolling || web) {
                     scheduledExecutorService = ThreadUtil.createScheduledExecutor(2);
                 }
@@ -335,6 +335,7 @@ public class Cron {
                         json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
                                 .toString();
                     }
+                    queue.poll();
                     queue.offer(json);
                     scheduledExecutorService.schedule(() -> {
                         map.get(key).poll();
