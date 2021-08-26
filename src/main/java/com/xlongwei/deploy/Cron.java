@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -135,7 +134,7 @@ public class Cron {
             try {
                 // 客户端超时时间要大于长轮询约定的超时时间
                 if (debug) {
-                    System.out.printf("long pooling start = %s\n", LocalDateTime.now());
+                    System.out.printf("long pooling start\n");
                 }
                 HttpResponse execute = HttpRequest.get(url).timeout(31000).execute();
                 int status = execute.getStatus();
@@ -161,6 +160,7 @@ public class Cron {
                 }
             } catch (Exception e) {
                 System.out.println(e.getMessage());
+                ThreadUtil.safeSleep(1000);
             }
         }, 1, 1, TimeUnit.MILLISECONDS);
     }
