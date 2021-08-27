@@ -27,6 +27,8 @@ import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.OS;
 import org.apache.commons.exec.PumpStreamHandler;
 
+import cn.hutool.cache.Cache;
+import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
@@ -301,7 +303,8 @@ public class Cron {
     }
 
     public static class ShellAction implements Action {
-        private Map<String, LongPollingObject<String>> map = new HashMap<>();
+        private Cache<String, LongPollingObject<String>> map = CacheUtil.newLFUCache(100,
+                TimeUnit.SECONDS.toMillis(30));
         private String prefix = "uuid.";
 
         @Override
@@ -338,16 +341,21 @@ public class Cron {
                         response.write(json);
                     }
                 } else {
-                    String tag = "ok";
                     if (StrUtil.isNotBlank(result)) {
                         json = new JSONObject().set("result", result).toString();
+                        queue.put(json);
+                        response.write("ok");
                     } else {
-                        tag = prefix + IdUtil.fastSimpleUUID();
+                        String tag = prefix + IdUtil.fastSimpleUUID();
                         json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
                                 .set("tag", tag).toString();
+                        try {
+                            queue.put(json, 29, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            System.out.println(e.getMessage());
+                        }
+                        response.write(tag);
                     }
-                    response.write(tag);
-                    queue.put(json);
                 }
             } else {
                 if (StrUtil.isNotBlank(host)) {
@@ -448,17 +456,35 @@ public class Cron {
     public static class LongPollingObject<T> {
         private long timestamp;
         private Lock lock = new ReentrantLock();
-        private Condition condition = lock.newCondition();
+        private Condition notEmpty = lock.newCondition();
+        private Condition notFull = lock.newCondition();
         private T object;
 
         public void put(T object) {
             this.timestamp = System.currentTimeMillis();
             this.object = object;
-            this.lock.lock();
+            lock.lock();
             try {
-                condition.signalAll();
+                notEmpty.signal();
             } finally {
-                this.lock.unlock();
+                lock.unlock();
+            }
+        }
+
+        public void put(T object, long timeout, TimeUnit unit) throws InterruptedException {
+            long nanos = unit.toNanos(timeout);
+            lock.lockInterruptibly();
+            try {
+                while (this.object != null) {
+                    if (nanos <= 0)
+                        return;
+                    nanos = notFull.awaitNanos(nanos);
+                }
+                this.timestamp = System.currentTimeMillis();
+                this.object = object;
+                notEmpty.signal();
+            } finally {
+                lock.unlock();
             }
         }
 
@@ -468,11 +494,17 @@ public class Cron {
                 if (object != null && timestamp + unit.toMillis(timeout) > System.currentTimeMillis()) {
                     return object;
                 }
-                condition.await(timeout, unit);
-                return this.object;
+                long nanos = unit.toNanos(timeout);
+                while (object == null) {
+                    if (nanos <= 0)
+                        return null;
+                    nanos = notEmpty.awaitNanos(nanos);
+                }
+                notFull.signal();
+                return object;
             } finally {
                 lock.unlock();
-                this.object = null;
+                object = null;
             }
         }
 
