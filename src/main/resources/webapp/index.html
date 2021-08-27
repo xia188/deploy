@@ -40,7 +40,7 @@
                     if (!key) {
                         submitButton.disabled = undefined;
                     } else {
-                        fetch('/deploy?key=' + key + '.result', { method: 'GET' })
+                        fetch('/deploy?key=' + text, { method: 'GET' })
                             .then(response => response.json())
                             .then(json => { resultPara.innerText = json.result; submitButton.disabled = undefined })
                             .catch(error => { console.log(error); resultPara.innerText = 'error'; submitButton.disabled = undefined })

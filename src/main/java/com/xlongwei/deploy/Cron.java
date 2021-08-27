@@ -10,8 +10,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -30,6 +32,7 @@ import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.CharsetUtil;
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.cron.CronUtil;
@@ -152,15 +155,16 @@ public class Cron {
                     String deploy = json.getStr("deploy");
                     String deploys = json.getStr("deploys");
                     boolean test = json.getBool("test", Boolean.TRUE);
+                    String tag = json.getStr("tag");
                     String result = ShellAction.deploy(deploy, deploys, test);
-                    execute = HttpRequest.post(url + ".result").form("result", result).execute();
+                    execute = HttpRequest.post(host + "/deploy?key=" + tag).form("result", result).execute();
                     if (debug) {
                         System.out.printf("long pooling result = %s\n", execute.getStatus());
                     }
                 }
             } catch (Exception e) {
                 System.out.println(e.getMessage());
-                ThreadUtil.safeSleep(1000);
+                ThreadUtil.safeSleep(3000);
             }
         }, 1, 1, TimeUnit.MILLISECONDS);
     }
@@ -257,7 +261,6 @@ public class Cron {
                 }
             } catch (Exception e) {
                 System.out.println(e.getMessage());
-                ThreadUtil.safeSleep(1000);
             }
         }
 
@@ -298,7 +301,8 @@ public class Cron {
     }
 
     public static class ShellAction implements Action {
-        private Map<String, SynchronousQueue<String>> map = new HashMap<>();
+        private Map<String, LongPollingObject<String>> map = new HashMap<>();
+        private String prefix = "uuid.";
 
         @Override
         public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
@@ -308,42 +312,42 @@ public class Cron {
             String deploys = request.getParam("deploys");
             boolean test = "true".equals(request.getParam("test"));
             if (StrUtil.isNotBlank(key)) {
-                SynchronousQueue<String> queue = null;
-                synchronized (map) {
-                    queue = map.get(key);
-                    if (queue == null) {
-                        queue = new SynchronousQueue<>();
-                        map.put(key, queue);
+                LongPollingObject<String> queue = map.get(key);
+                if (queue == null) {
+                    synchronized (map) {
+                        queue = map.get(key);
+                        if (queue == null) {
+                            queue = new LongPollingObject<>();
+                            map.put(key, queue);
+                        }
                     }
                 }
                 String json = null;
                 if (request.isGetMethod()) {
                     try {
-                        json = queue.poll(29, TimeUnit.SECONDS);
+                        json = queue.get(29, TimeUnit.SECONDS);
                     } catch (InterruptedException e) {
                         System.out.println(e.getMessage());
                     }
                     if (json == null) {
                         response.send(HttpStatus.HTTP_NOT_MODIFIED);
                     } else {
+                        if (key.startsWith(prefix)) {
+                            map.remove(key);
+                        }
                         response.write(json);
                     }
                 } else {
+                    String tag = "ok";
                     if (StrUtil.isNotBlank(result)) {
                         json = new JSONObject().set("result", result).toString();
                     } else {
+                        tag = prefix + IdUtil.fastSimpleUUID();
                         json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
-                                .toString();
+                                .set("tag", tag).toString();
                     }
-                    scheduledExecutorService.schedule(() -> {
-                        map.get(key).poll();
-                    }, 31, TimeUnit.SECONDS);
-                    try {
-                        queue.offer(json, 29, TimeUnit.SECONDS);
-                    } catch (Exception e) {
-                        System.out.println(e.getMessage());
-                    }
-                    response.write(json);
+                    response.write(tag);
+                    queue.put(json);
                 }
             } else {
                 if (StrUtil.isNotBlank(host)) {
@@ -439,5 +443,38 @@ public class Cron {
             }
             return namespaceIps;
         }
+    }
+
+    public static class LongPollingObject<T> {
+        private long timestamp;
+        private Lock lock = new ReentrantLock();
+        private Condition condition = lock.newCondition();
+        private T object;
+
+        public void put(T object) {
+            this.timestamp = System.currentTimeMillis();
+            this.object = object;
+            this.lock.lock();
+            try {
+                condition.signalAll();
+            } finally {
+                this.lock.unlock();
+            }
+        }
+
+        public T get(long timeout, TimeUnit unit) throws InterruptedException {
+            lock.lockInterruptibly();
+            try {
+                if (object != null && timestamp + unit.toMillis(timeout) > System.currentTimeMillis()) {
+                    return object;
+                }
+                condition.await(timeout, unit);
+                return this.object;
+            } finally {
+                lock.unlock();
+                this.object = null;
+            }
+        }
+
     }
 }
