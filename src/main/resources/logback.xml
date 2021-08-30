@@ -12,10 +12,10 @@
 		</encoder>
 	</appender>
 	<appender name="rollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>${LOG_HOME}/${LOG_NAME}.log</file>
+		<file>${LOG_HOME}/${LOG_NAME}.${spring.profiles.active}.log</file>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>
-				${LOG_HOME}/${LOG_NAME}.log.%d{yyyy-MM-dd}
+				${LOG_HOME}/${LOG_NAME}.${spring.profiles.active}.log.%d{yyyy-MM-dd}
 			</fileNamePattern>
 			<maxHistory>100</maxHistory>
 		</rollingPolicy>

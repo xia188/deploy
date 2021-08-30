@@ -20,6 +20,7 @@
         }
     </style>
     <script>
+        var getTimeout = undefined;
         function submit() {
             let submitButton = document.querySelector('button');
             submitButton.disabled = 'disabled';
@@ -33,20 +34,30 @@
             formData.append('deploy', deploy);
             formData.append('deploys', deploys);
             formData.append('test', test);
+            if(!getTimeout) {
+                clearTimeout(getTimeout);
+                getTimeout = undefined;
+            }
             fetch('/deploy', { method: 'POST', body: formData })
                 .then(response => response.text())
                 .then(text => {
-                    resultPara.innerText = text;
                     if (!key) {
                         submitButton.disabled = undefined;
+                        resultPara.innerText = text;
                     } else {
-                        fetch('/deploy?key=' + text, { method: 'GET' })
-                            .then(response => response.json())
-                            .then(json => { resultPara.innerText = json.result; submitButton.disabled = undefined })
-                            .catch(error => { console.log(error); resultPara.innerText = 'error'; submitButton.disabled = undefined })
+                        resultPara.innerText = 'waiting for result';
+                        getTimeout = window.setTimeout(getFunction, 1000, text);
                     }
                 })
                 .catch(error => { console.log(error); resultPara.innerText = 'error'; submitButton.disabled = undefined })
+        }
+        function getFunction(text) {
+            let submitButton = document.querySelector('button');
+            let resultPara = document.querySelector('#result');
+            fetch('/deploy?key=' + text, { method: 'GET' })
+                            .then(response => response.json())
+                            .then(json => { resultPara.innerText = json.result; submitButton.disabled = undefined })
+                            .catch(error => { console.log(error); resultPara.innerText = 'waiting again ...'; submitButton.disabled = undefined; getTimeout = window.setTimeout(getFunction, 1000, text); })
         }
     </script>
 </head>

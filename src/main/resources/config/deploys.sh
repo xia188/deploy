@@ -28,10 +28,12 @@ person) namespaceIps=(
 *) usage ;;
 esac
 
+echo `date +"%F %T"`
+echo "deploys ${service}"
 cd cmp_${service}
 svn cleanup
 lines=`svn up|wc -l`
-mvn clean compile resources:resources jar:jar
+mvn compile resources:resources jar:jar
 if [ $lines -gt 2 ] ; then
   svn up -r PREV
 fi
@@ -50,3 +52,4 @@ for ((i = 0; i < ${#namespaceIps[@]}; ++i)); do
 
 done
 cd ..
+echo `date +"%F %T"`
