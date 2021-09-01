@@ -1,0 +1,7 @@
+export SSHDEPLOY='/e/DJBX/deploy'
+export SSHPASS='devpass'
+export SSHPASS_pro='propass'
+alias ll='ls -l'
+alias jssh='java -cp ${SSHDEPLOY:-.}/deploy.jar com.xlongwei.deploy.Ssh'  
+alias jscp='java -cp ${SSHDEPLOY:-.}/deploy.jar com.xlongwei.deploy.Scp'  
+alias jcron='java -cp ${SSHDEPLOY:-.}/deploy.jar com.xlongwei.deploy.Cron'

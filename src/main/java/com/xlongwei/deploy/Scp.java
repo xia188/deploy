@@ -15,14 +15,15 @@ import java.util.stream.Collectors;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.SftpProgressMonitor;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
+import com.jcraft.jsch.SftpProgressMonitor;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.lang.Filter;
+import cn.hutool.core.swing.clipboard.ClipboardUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.ssh.JschUtil;
@@ -63,6 +64,9 @@ public class Scp {
     @Parameter(names = { "--help", "-h", "--info" }, description = "print Usage info")
     boolean help = false;
 
+    @Parameter(names = { "--copy", "-c" }, description = "copy ENV SSHPASS[_{pw}]")
+    boolean copy = false;
+
     static Pattern userHostPath = Pattern.compile("(.+)@(.+):(.+)");
 
     static List<String> syncExtDefault = Arrays.asList("jar");
@@ -75,7 +79,16 @@ public class Scp {
     }
 
     public void run(JCommander jCommander) {
-        if (help || StrUtil.isAllBlank(passwd, identityFile) || paths == null || paths.size() <= 1) {
+        if (StrUtil.isNotBlank(passwd)) {
+            String sshpass = System.getenv("SSHPASS_" + passwd);
+            if (StrUtil.isNotBlank(sshpass)) {
+                passwd = sshpass;
+            }
+        }
+        if (copy && StrUtil.isNotBlank(passwd)) {
+            ClipboardUtil.setStr(passwd);
+            System.out.println("passwd copied");
+        } else if (help || StrUtil.isAllBlank(passwd, identityFile) || paths == null || paths.size() <= 1) {
             jCommander.usage();
         } else {
             String target = paths.get(paths.size() - 1);

@@ -34,7 +34,7 @@ public class Ssh {
     @Parameter(names = { "--help", "-h", "--info" }, description = "print Usage info")
     boolean help = false;
 
-    @Parameter(names = { "--copy", "-c" }, description = "copy ENV SSHPASS")
+    @Parameter(names = { "--copy", "-c" }, description = "copy ENV SSHPASS[_{pw}]")
     boolean copy = false;
 
     @Parameter(description = "destination command")
@@ -50,6 +50,12 @@ public class Ssh {
     }
 
     public void run(JCommander jCommander) {
+        if (StrUtil.isNotBlank(passwd)) {
+            String sshpass = System.getenv("SSHPASS_" + passwd);
+            if (StrUtil.isNotBlank(sshpass)) {
+                passwd = sshpass;
+            }
+        }
         if (copy && StrUtil.isNotBlank(passwd)) {
             ClipboardUtil.setStr(passwd);
             System.out.println("passwd copied");

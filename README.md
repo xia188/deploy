@@ -33,6 +33,16 @@ mvn dependency:copy-dependencies -DoutputDirectory=target
 jscp --sync target tomcat@10.7.128.28:/home/tomcat/code/cmp_order
 ```
 
+#### 密码管理
+```
+jssh -c //复制 echo $SSHPASS
+jscp -c -pw pro //复制 echo ${SSHPASS_pro:-pro}
+//使用pro密码同步文件目录
+jscp -pw pro --sync target tomcat@10.9.176.54:/home/tomcat/code/cmp_order
+//没有配置$SSHPASS_propass时，直接使用propass远程执行命令
+jssh -pw propass tomcat@10.9.176.54 "cd /home/tomcat/code;sh start.sh order"
+```
+
 #### 自动部署
 ```
 配置SSHPASS，修改init.sh、deploy.sh之后，手动部署成功，即可jcron启动自动部署
