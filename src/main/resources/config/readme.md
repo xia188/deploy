@@ -41,3 +41,9 @@ jscp --sync target tomcat@10.7.128.28:/home/tomcat/code/cmp_order
 ```
 jcron
 ```
+# 发布完整包时
+```
+不需要init初始化
+可选计算bootstrap.properties（并注释application.properties里面的spring.cloud.nacos.discovery.namespace），更建议启动脚本提供此类配置
+deploys.sh注释部分支持不同namespace打不同的包，上传到公共的nas目录，然后远程执行脚本复制完整包并重启应用即可
+```
