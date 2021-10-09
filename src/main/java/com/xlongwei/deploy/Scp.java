@@ -440,7 +440,7 @@ public class Scp {
     }
 
     class ProgressMonitor implements SftpProgressMonitor {
-        private long max = 0, count = 0;
+        private long max = 0, count = 0, start = 0;
         private String src, dest;
 
         @Override
@@ -454,8 +454,12 @@ public class Scp {
         public boolean count(long count) {
             this.count += count;
             if (debug || RandomUtil.randomBoolean()) {
-                System.out.printf("%s ==> %s == %s/%s = %s%%\n", this.src, this.dest, this.count, this.max,
-                        this.count * 100 / this.max);
+                long now = System.currentTimeMillis();
+                if (now - start > 1000) {
+                    System.out.printf("%s ==> %s == %s/%s = %s%%\n", this.src, this.dest, this.count, this.max,
+                            this.count * 100 / this.max);
+                    start = now;
+                }
             }
             return true;
         }
