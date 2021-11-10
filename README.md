@@ -26,8 +26,11 @@ jcron
 ```
 sh init.sh order 24
 sh deploy.sh dev order 24
+//如果是发布全量包，则从nas目录复制并重启，否则再次使用deploy.sh脚本也很快
+sh restart.sh dev order 25
+//批量发布支持多环境，多主机，auto.sh可以自动检查代码更新并自动发布应用
 sh deploys.sh order
-//修改pom.xml后，同步目录
+//修改pom.xml后，同步目录，sh sync.sh order 25
 mvn clean compile resources:resources jar:jar
 mvn dependency:copy-dependencies -DoutputDirectory=target
 jscp --sync target tomcat@10.7.128.28:/home/tomcat/code/cmp_order
