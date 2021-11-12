@@ -16,8 +16,10 @@ fi
 jar=cmp_${service}/cmp_${service}.jar
 logback=log/logback.xml
 mainClass=com.xlongwei.cloud.Application
+ip=`ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}'`
 
 cp="cmp_${service}/cmp_${service}.jar"
+# 完整包时上面就够了，最小包时还需要加上所有依赖jar
 for item in `ls cmp_${service}/*.jar`; do
   if [ -z $cp ]; then
     cp=$item
@@ -58,7 +60,8 @@ sleep 1
 Survivor=8 Old=128 NewSize=$[Survivor*10] Xmx=$[NewSize+Old] #NewSize=Survivor*(1+1+8) Xmx=NewSize+Old
 JVM_OPS="-server -Djava.awt.headless=true -Dspring.profiles.active=${namespace}"
 # JVM_OPS="$JVM_OPS -Xmx${Xmx}m -Xms${Xmx}m -XX:NewSize=${NewSize}m -XX:MaxNewSize=${NewSize}m -XX:SurvivorRatio=8 -Xss228k"
-# JVM_OPS="$JVM_OPS -Dcmp.service=${service} -Dlogging.config=${logback}"
+# 全局配置日志比较好，改动之后可以所有应用快速生效，logback配置文件需放在nas目录，日志同时在本机和nas目录输出
+# JVM_OPS="$JVM_OPS -Dcmp.service=${service} -Dip=${ip} -Dlogging.config=${logback}"
 JVM_OPS="$JVM_OPS -Dspring.cloud.nacos.config.server-addr=${nacos} -Dspring.cloud.nacos.config.namespace=service-namespace-${namespace}"
 JVM_OPS="$JVM_OPS -Dspring.cloud.nacos.discovery.server-addr=${nacos} -Dspring.cloud.nacos.discovery.namespace=service-namespace-${namespace}"
 # JVM_OPS="$JVM_OPS -Dspring.cloud.nacos.username=${nacos_username} -Dspring.cloud.nacos.password=${nacos_password}"

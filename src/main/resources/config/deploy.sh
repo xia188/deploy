@@ -10,6 +10,7 @@ if [ ${#ip} -le 3 ]; then
 fi
 echo `date +"%F %T"`
 echo "deploy ${service} ${namespace} ${ip}"
+# sh nacos.sh offline ${namespace} ${service} ${ip}
 cd cmp_${service}
 svn cleanup
 lines=`svn up|wc -l`

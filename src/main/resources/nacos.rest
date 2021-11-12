@@ -1,0 +1,29 @@
+@host=http://localhost:8848
+#https://nacos.io/zh-cn/docs/open-api.html
+###查询命名空间列表
+GET {{host}}/nacos/v1/console/namespaces
+
+###查询服务列表
+GET {{host}}/nacos/v1/ns/service/list
+    ?pageNo=1
+    &pageSize=100
+    &namespaceId=service-namespace-dat
+
+###查询实例列表
+GET {{host}}/nacos/v1/ns/instance/list
+    ?serviceName=service-order
+    &namespaceId=service-namespace-dat
+
+###查询实例详情
+GET {{host}}/nacos/v1/ns/instance
+    ?serviceName=service-order
+    &namespaceId=service-namespace-dat
+    &ip=10.7.128.30
+    &port=8017
+
+@enabled=false
+###注册实例 enabled=true上线 false下线
+PUT {{host}}/nacos/v1/ns/instance
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+serviceName=service-order&ip=10.7.128.30&port=8017&enabled={{enabled}}&namespaceId=service-namespace-dat
