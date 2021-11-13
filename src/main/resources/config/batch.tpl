@@ -1,13 +1,7 @@
-if [ $# -ne 2 ]; then
-  echo "Usage: start.sh service namespace"
-  exit 0
-fi
+#!/bin/sh
 
 source /etc/profile
 
-service=$1
-namespace=$2
-ip=`ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}'`
 nacos=10.7.128.11:8848,10.7.128.12:8848,10.7.128.13:8848
 # dev sit uat vir pro
 if [ "$namespace" == "pro" ]; then
@@ -32,9 +26,9 @@ PID=`ps -ef|grep ${jar}|grep -v 'grep'|head -n 1|awk '{print $2}'`
 
 if [ -z "$PID" ]
 then
-  echo "$service not running"
+  echo "${service} not running"
 else
-  echo "killing $service $PID"
+  echo "killing ${service} $PID"
   kill $PID
   COUNT=0
   while [ $COUNT -lt 10 ]; do
@@ -66,5 +60,6 @@ JVM_OPS="$JVM_OPS -Dspring.cloud.nacos.config.server-addr=${nacos} -Dspring.clou
 JVM_OPS="$JVM_OPS -Dspring.cloud.nacos.discovery.server-addr=${nacos} -Dspring.cloud.nacos.discovery.namespace=service-namespace-${namespace}"
 # JVM_OPS="$JVM_OPS -Dspring.cloud.nacos.username=${nacos_username} -Dspring.cloud.nacos.password=${nacos_password}"
 
+echo "java $JVM_OPS -cp $cp ${mainClass}"
 nohup java $JVM_OPS -cp $cp ${mainClass} &>> /dev/null &
 echo "starting ..."
