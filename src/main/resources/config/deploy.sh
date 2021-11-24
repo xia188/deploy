@@ -20,7 +20,8 @@ mvn compile resources:resources jar:jar
 if [ $lines -gt 2 ] ; then
   svn up -r PREV
 fi
-[ ! -e "~/.bashrc" ] && source ~/.bashrc
+[ -e "./env.sh" ] && source ./env.sh
+[ -e "~/.bashrc" ] && source ~/.bashrc
 jscp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/code/cmp_${service}
 jssh tomcat@${ip} "cd /home/tomcat/code;sh ${service}.sh ${service} ${namespace}"
 # jscp target/cmp_${service}.jar tomcat@${ip}:/home/tomcat/ftpData/test/${namespace}

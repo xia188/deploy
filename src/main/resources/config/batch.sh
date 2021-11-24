@@ -14,7 +14,8 @@ namespace="$2"
 ip="$3"
 service="$4"
 # 支持jssh jscp命令
-[ ! -e "~/.bashrc" ] && source ~/.bashrc
+[ -e "./env.sh" ] && source ./env.sh
+[ -e "~/.bashrc" ] && source ~/.bashrc
 
 namespaces=(
     dev=23,24

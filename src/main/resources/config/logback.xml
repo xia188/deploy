@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="60 seconds" debug="true">
 	<property name="LOG_NAME" value="${cmp.service:-cmp}" />
-	<property name="LOG_HOME" value="log/cmp_${LOG_NAME}" />
+	<property name="NAS_HOME" value="/nas/log/cmp_${LOG_NAME}" />
+	<property name="LOCAL_HOME" value="logs/cmp_${LOG_NAME}" />
 	<!-- <contextName>${LOG_NAME}</contextName> -->
 	<property name="LOG_FILE_ENCODING" value="UTF-8" />
 	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
@@ -10,14 +11,12 @@
 			</pattern>
 		</encoder>
 	</appender>
-	<appender name="rollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+	<appender name="nasFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<prudent>true</prudent>
-		<!-- <file>${LOG_HOME}/${LOG_NAME}.log</file> -->
-		<!-- <file>${LOG_HOME}/${LOG_NAME}.${spring.profiles.active}.log</file> -->
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>
-				${LOG_HOME}/${LOG_NAME}.log.%d{yyyy-MM-dd}
-				<!-- ${LOG_HOME}/${LOG_NAME}.${spring.profiles.active}.log.%d{yyyy-MM-dd} -->
+				${NAS_HOME}/${LOG_NAME}.log.%d{yyyy-MM-dd}
+				<!-- ${NAS_HOME}/${LOG_NAME}.${spring.profiles.active}.log.%d{yyyy-MM-dd} -->
 			</fileNamePattern>
 			<maxHistory>30</maxHistory>
 		</rollingPolicy>
@@ -27,14 +26,14 @@
 			</pattern>
 		</encoder>
 	</appender>
-	<appender name="rollingAsync" class="ch.qos.logback.classic.AsyncAppender">
-		<appender-ref ref="rollingFile" />
+	<appender name="nasAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="nasFile" />
 		<IncludeCallerData>true</IncludeCallerData>
 	</appender>
 	<appender name="localFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>logs/cmp_${LOG_NAME}/${LOG_NAME}.log</file>
+		<file>${LOCAL_HOME}/${LOG_NAME}.log</file>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${LOG_NAME}.log.%d{yyyy-MM-dd}</fileNamePattern>
+			<fileNamePattern>${LOCAL_HOME}/${LOG_NAME}.log.%d{yyyy-MM-dd}</fileNamePattern>
 			<maxHistory>15</maxHistory>
 		</rollingPolicy>
 		<encoder charset="${LOG_FILE_ENCODING}">
@@ -52,7 +51,7 @@
 	<logger name="springfox.documentation.spring.web.plugins.DefaultRequestHandlerCombiner" level="debug" />
 	<logger name="com.alibaba.cloud.nacos.client.NacosPropertySourceBuilder" level="debug" />
 	<root level="warn">
-		<appender-ref ref="rollingAsync" />
+		<appender-ref ref="nasAsync" />
 		<appender-ref ref="localAsync" />
 	</root>
 </configuration>

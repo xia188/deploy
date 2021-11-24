@@ -42,7 +42,8 @@ if [ $lines -gt 2 ] ; then
   svn up -r PREV
 fi
 # declare -A namespaces
-[ ! -e "~/.bashrc" ] && source ~/.bashrc
+[ -e "./env.sh" ] && source ./env.sh
+[ -e "~/.bashrc" ] && source ~/.bashrc
 for ((i = 0; i < ${#namespaceIps[@]}; ++i)); do
 
     namespaceIp=${namespaceIps[i]}

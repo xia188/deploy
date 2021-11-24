@@ -1,4 +1,4 @@
-export SSHDEPLOY='/e/DJBX/deploy'
+export SSHDEPLOY='../../../../target'
 export SSHPASS='devpass'
 export SSHPASS_pro='propass'
 alias ll='ls -l'

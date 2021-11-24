@@ -11,6 +11,7 @@ echo "sync $service $ip"
 cd cmp_${service}
 mvn clean compile resources:resources jar:jar
 mvn dependency:copy-dependencies -DoutputDirectory=target
-[ ! -e "~/.bashrc" ] && source ~/.bashrc
+[ -e "./env.sh" ] && source ./env.sh
+[ -e "~/.bashrc" ] && source ~/.bashrc
 jscp --sync target tomcat@${ip}:/home/tomcat/code/cmp_${service}
 cd ..
