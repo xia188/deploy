@@ -29,9 +29,11 @@ import org.apache.commons.exec.PumpStreamHandler;
 
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
+import cn.hutool.core.codec.Base64;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
+import cn.hutool.core.net.multipart.UploadFile;
 import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.IdUtil;
@@ -42,6 +44,7 @@ import cn.hutool.cron.task.Task;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpStatus;
+import cn.hutool.http.Method;
 import cn.hutool.http.server.HttpServerRequest;
 import cn.hutool.http.server.HttpServerResponse;
 import cn.hutool.http.server.SimpleServer;
@@ -158,6 +161,10 @@ public class Cron {
                     String deploys = json.getStr("deploys");
                     boolean test = json.getBool("test", Boolean.TRUE);
                     String tag = json.getStr("tag");
+                    String update = json.getStr("update");
+                    if (StrUtil.isNotBlank(update)) {
+                        FileUtil.writeBytes(Base64.decode(update), new File("update.tgz"));
+                    }
                     String result = ShellAction.deploy(deploy, deploys, test);
                     execute = HttpRequest.post(host + "/deploy?key=" + tag).form("result", result).execute();
                     if (debug) {
@@ -314,6 +321,16 @@ public class Cron {
             String deploy = request.getParam("deploy");
             String deploys = request.getParam("deploys");
             boolean test = "true".equals(request.getParam("test"));
+            UploadFile update = !Method.POST.name().equals(request.getMethod()) || StrUtil.isNotBlank(result) ? null
+                    : request.getMultipart().getFile("update");
+            boolean hasUpdateTgz = update != null && update.getFileName().endsWith(".tgz");
+            if (hasUpdateTgz) {
+                if (StrUtil.isNotBlank(deploy)) {
+                    deploy += " update.tgz";
+                } else if (StrUtil.isNotBlank(deploys)) {
+                    deploys += " update.tgz";
+                }
+            }
             if (StrUtil.isNotBlank(key)) {
                 LongPollingObject<String> queue = map.get(key);
                 if (queue == null) {
@@ -347,8 +364,14 @@ public class Cron {
                         response.write("ok");
                     } else {
                         String tag = prefix + IdUtil.fastSimpleUUID();
-                        json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
-                                .set("tag", tag).toString();
+                        if (hasUpdateTgz) {
+                            json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
+                                    .set("tag", tag).set("update", Base64.encode(update.getFileInputStream()))
+                                    .toString();
+                        } else {
+                            json = new JSONObject().set("deploy", deploy).set("deploys", deploys).set("test", test)
+                                    .set("tag", tag).toString();
+                        }
                         try {
                             queue.put(json, 29, TimeUnit.SECONDS);
                         } catch (InterruptedException e) {
@@ -360,6 +383,9 @@ public class Cron {
             } else {
                 if (StrUtil.isNotBlank(host)) {
                     test = true;// 使用长轮询绕路时，可用lp.key自我保护
+                }
+                if (hasUpdateTgz) {
+                    FileUtil.writeFromStream(update.getFileInputStream(), new File("update.tgz"), true);
                 }
                 result = deploy(deploy, deploys, test);
                 response.write(result);
@@ -396,6 +422,7 @@ public class Cron {
             task.execute();
             String result = String.join(StrUtil.CRLF, task.outputs);
             new File(".", "deploys_tmp.sh").delete();
+            new File(".", "update.tgz").delete();
             return result;
         }
 

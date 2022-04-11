@@ -34,6 +34,7 @@
             formData.append('deploy', deploy);
             formData.append('deploys', deploys);
             formData.append('test', test);
+            formData.append('update', document.querySelector('input[name="update"]').files[0]);
             if(!getTimeout) {
                 clearTimeout(getTimeout);
                 getTimeout = undefined;
@@ -75,6 +76,7 @@
     <label></label>
     <button onclick="submit()" style="font-size: 18px;">submit</button>
     <input type="checkbox" name="test" checked title="test mode" style="width: auto; vertical-align: middle;">
+    <input type="file" name="update" placeholder="update.tgz">
     <br />
     <p id="result"></p>
 </body>
