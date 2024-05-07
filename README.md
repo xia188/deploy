@@ -62,4 +62,4 @@ jcron --web
 //内网部署：key是密钥，避免泄露
 jcron --lp.host=https://deploy.xlongwei.com/ --lp.key=xlongwei
 ```
-![deploy](https://t.xlongwei.com/images/deploy/deploy.png)
+[架构设计](http://115.28.229.158/tool/images/deploy/deploy.png)
