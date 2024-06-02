@@ -3,12 +3,9 @@ package com.xlongwei.deploy;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -30,8 +27,8 @@ import org.apache.commons.exec.PumpStreamHandler;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.codec.Base64;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.net.multipart.UploadFile;
 import cn.hutool.core.thread.ThreadUtil;
@@ -182,6 +179,7 @@ public class Cron {
         SimpleServer server = new SimpleServer(port);
         server.addAction("/", new HtmlAction());
         server.addAction("/deploy", new ShellAction());
+        server.addAction("/api/json", new CliAction());
         server.start();
         System.out.printf("web started at http://localhost:%s/\n", port);
     }
@@ -279,36 +277,97 @@ public class Cron {
 
         @Override
         public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
-            String path = request.getPath();
-            if (StrUtil.isBlank(path) || "/".equals(path)) {
-                path = "/index.html";
-            }
-            String resource = "webapp" + path;
-            boolean html = resource.endsWith(".html");
-            String contentType = html ? "text/html; charset=utf-8" : "image/x-icon";
-            response.addHeader("x-content-type-options", "nosniff");
-            response.addHeader("cache-control", html && debug ? "no-cache" : "max-age=31536000, immutable");
-            response.write(bytes(resource), contentType);
-        }
-
-        static Map<String, byte[]> resources = debug ? null : new HashMap<>();
-
-        public static byte[] bytes(String resource) {
-            byte[] html = debug ? null : resources.get(resource);
-            if (html == null) {
-                try (InputStream in = ResourceUtil.getResourceObj(resource).getStream()) {
-                    html = IoUtil.readBytes(in);
+            String path = StrUtil.trimToEmpty(request.getPath());
+            if(path.startsWith("/target")) {
+            	File file = new File(path.substring(1));
+            	if(file.exists()) {
+            		if(file.isFile()) {
+            			response.write(file);
+            		}else {
+            			response.write(dir(file));
+            		}
+            		return;
+            	}
+            }else {
+            	String resource = "webapp" + (path.length() <= 1 ? "/index.html" : path);
+            	try (InputStream in = ResourceUtil.getResourceObj(resource).getStream()) {
+                    response.write(in);
+                    return;
                 } catch (Exception e) {
-                    html = e.getMessage().getBytes(StandardCharsets.UTF_8);
-                }
-                if (debug == false) {
-                    resources.put(resource, html);
+                	System.out.println(e.getMessage());
                 }
             }
-            return html;
+        	response.send404("404 Not Found !");
         }
+
+		private String dir(File dir) {
+			StringBuilder html = new StringBuilder("<!DOCTYPE html><body><h1>/target/</h1><hr><pre>");
+			String sep = " ".repeat(60);
+			for (File file : dir.listFiles()) {
+				if(file.isDirectory()) continue;
+				html.append("\n<a href=\"/target/").append(file.getName()).append("\">").append(file.getName()).append("</a>");
+				html.append(sep).delete(html.length() - file.getName().length(),html.length()).append(DateUtil.date(file.lastModified()));
+				html.append(sep).append(file.length());
+			}
+			html.append("</pre><hr></body></html>");
+			return html.toString();
+		}
     }
 
+    public static class CliAction implements Action {
+
+		@Override
+		public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
+			String framework = StrUtil.trimToEmpty(request.getParam("framework"));
+			String config = StrUtil.trimToEmpty(request.getParam("config"));
+			String model = StrUtil.trimToEmpty(request.getParam("model"));
+			String message = "unknown";
+			
+			String cliJar = "target/codegen-cli-1.6.47.jar";
+			String output = IdUtil.fastSimpleUUID();
+			String zip = "target/" + output + ".zip";
+			File configFile = new File(output + ".config"), modelFile = new File(output + ".yaml");
+			try {
+				//处理非网址的情形
+				if (config.startsWith("{") || config.startsWith("[")) {
+					FileUtil.writeUtf8String(config, configFile);
+					config = configFile.getName();
+				}
+				if (StrUtil.isNotBlank(model) && !model.startsWith("http")) {
+					if (model.startsWith("{") || model.startsWith("[")) {
+						// json格式可以不用base64转码
+						modelFile = new File(output + ".json");
+					} else {
+						model = Base64.decodeStr(model);
+						if (model.startsWith("{") || model.startsWith("[")) {
+							modelFile = new File(output + ".json");
+						} else if (model.startsWith("schema")) {
+							modelFile = new File(output + ".grqphqls");
+						} else {
+							modelFile = new File(output + ".yaml");
+						}
+					}
+					FileUtil.writeUtf8String(model, modelFile);
+					model = modelFile.getName();
+				}
+				//生成项目，打包，删除目录
+				String shell = String.format("java -jar %s -f %s -c %s -m %s -o %s", cliJar, framework, config, model, output);
+				new ShellTask(shell, timeout).execute();
+				new ShellTask("jar cf " + zip + " " + output, timeout).execute();
+				File outputFile = new File(output), zipFile = new File(zip);
+				FileUtil.del(outputFile);
+				System.out.println(output + "=" + outputFile.exists() + " " + zip + "=" + zipFile.exists());
+				message = zipFile.exists() ? zip : "生成失败";
+			} catch (Exception e) {
+				message = e.getMessage();
+			}
+			FileUtil.del(configFile);
+			FileUtil.del(modelFile);
+			response.write(new JSONObject().set("message", message).toString());
+		}
+    	
+    }
+    
     public static class ShellAction implements Action {
         private Cache<String, LongPollingObject<String>> map = CacheUtil.newLFUCache(100,
                 TimeUnit.SECONDS.toMillis(30));

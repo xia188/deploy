@@ -1,0 +1,55 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: light-start
+servers:
+- url: /
+externalDocs:
+  url: http://localhost:8080/target/
+  description: 文件下载
+paths:
+  /api/json:
+    post:
+      description: 由于BodyHandler无法处理multipart/form-data上传文件，因此仅支持网址或文本；并且yaml文件粘贴后丢失了格式等信息，所以使用base64转码，而json直接粘貼即可。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Args'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: 错误消息，或者文件路径
+          description: 点击上面的“文件下载”链接，拼接返回的message内容，即可下载生成的zip包。
+components:
+  schemas:
+    Args:
+      type: object
+      properties:
+        framework:
+          description: rest有3个，hybrid有2个，graphql有1个；config和model参考https://github.com/networknt/model-config。
+          type: string
+          enum:
+          - openapi
+          - openapikotlin
+          - light-hybrid-4j-service
+          - light-hybrid-4j-server
+          - light-graphql-4j
+        config:
+          description: 配置groupId、artifactId、package等信息的config.json文件内容（clip < config.json）或网址
+          type: string
+          example: https://gitee.com/lightgrp/light-service/raw/master/model-config/petstore/config.json
+        model:
+          description: 规范文件base64内容（base64 openapi.yaml | clip）或网址：openapi.yaml、swagger.json、schema.json、schema.graphqls，某些framework可以为空
+          type: string
+          example: https://gitee.com/lightgrp/light-service/raw/master/model-config/petstore/openapi.yaml
+      required:
+      - framework
+      - config
