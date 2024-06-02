@@ -63,3 +63,9 @@ jcron --web
 jcron --lp.host=https://deploy.xlongwei.com/ --lp.key=xlongwei
 ```
 [架构设计](http://115.28.229.158/tool/images/deploy/deploy.png)
+
+#### light-start支持
+下载[codegen-cli](http://115.28.229.158/mvnrepos/com/networknt/codegen-cli/1.6.47/codegen-cli-1.6.47.jar)到target目录
+```
+curl https://repo.maven.apache.org/maven2/com/networknt/codegen-cli/1.6.47/codegen-cli-1.6.47.jar -O
+```

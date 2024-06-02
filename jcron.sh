@@ -23,7 +23,7 @@ usage(){
     echo "  jar         build $appname.jar"
     echo "  jars        copy dependencies to target"
     echo "  package     build $appname.jar and copy dependencies to target"
-    echo "  rebuild     stop && build && start"
+    echo "  rebuild     stop && jar && start"
     echo "  refresh     stop && clean && build && jars && start"
     echo "  deploy      package all to one-fat $jarfile"
     echo "  redeploy    package all to one-fat $jarfile and restart"

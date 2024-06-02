@@ -302,7 +302,7 @@ public class Cron {
 
 		private String dir(File dir) {
 			StringBuilder html = new StringBuilder("<!DOCTYPE html><body><h1>/target/</h1><hr><pre>");
-			String sep = " ".repeat(60);
+			String sep = StrUtil.repeat(' ', 60);
 			for (File file : dir.listFiles()) {
 				if(file.isDirectory()) continue;
 				html.append("\n<a href=\"/target/").append(file.getName()).append("\">").append(file.getName()).append("</a>");
