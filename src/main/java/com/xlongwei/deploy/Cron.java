@@ -321,9 +321,10 @@ public class Cron {
 			String framework = StrUtil.trimToEmpty(request.getParam("framework"));
 			String config = StrUtil.trimToEmpty(request.getParam("config"));
 			String model = StrUtil.trimToEmpty(request.getParam("model"));
+			String release = StrUtil.trimToEmpty(request.getParam("release"));
 			String message = "unknown";
 			
-			String cliJar = "target/codegen-cli-1.6.47.jar";
+			String cliJar = release.startsWith("2") ? "target/codegen-cli-2.1.32.jar" : "target/codegen-cli-1.6.47.jar";
 			String output = IdUtil.fastSimpleUUID();
 			String zip = "target/" + output + ".zip";
 			File configFile = new File(output + ".config"), modelFile = new File(output + ".yaml");

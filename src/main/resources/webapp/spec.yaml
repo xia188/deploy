@@ -34,7 +34,7 @@ components:
       type: object
       properties:
         framework:
-          description: rest有3个，hybrid有2个，graphql有1个；config和model参考https://github.com/networknt/model-config。
+          description: rest有3个（其中openapilambda仅版本2.x支持），hybrid有2个，graphql有1个；config和model参考https://github.com/networknt/model-config。
           type: string
           enum:
           - openapi
@@ -42,6 +42,7 @@ components:
           - light-hybrid-4j-service
           - light-hybrid-4j-server
           - light-graphql-4j
+          - openapilambda
         config:
           description: 配置groupId、artifactId、package等信息的config.json文件内容（clip < config.json）或网址
           type: string
@@ -50,6 +51,12 @@ components:
           description: 规范文件base64内容（base64 openapi.yaml | clip）或网址：openapi.yaml、swagger.json、schema.json、schema.graphqls，某些framework可以为空
           type: string
           example: https://gitee.com/lightgrp/light-service/raw/master/model-config/petstore/openapi.yaml
+        release:
+          description: 版本2.x需JAVA11+支持，且openapilambda仅版本2.x支持
+          type: string
+          enum:
+            - 1.x
+            - 2.x
       required:
       - framework
       - config

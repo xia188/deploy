@@ -41,6 +41,30 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+	<profiles>
+		<profile>
+			<id>cli-1</id>
+			<dependencies>
+				<dependency>
+					<groupId>com.networknt</groupId>
+					<artifactId>codegen-cli</artifactId>
+					<version>1.6.47</version>
+					<scope>provided</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>cli-2</id>
+			<dependencies>
+				<dependency>
+					<groupId>com.networknt</groupId>
+					<artifactId>codegen-cli</artifactId>
+					<version>2.1.32</version>
+					<scope>provided</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
   <build>
     <finalName>${artifactId}</finalName>
     <plugins>

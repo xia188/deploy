@@ -20,6 +20,7 @@ usage(){
     echo "  stop        stop $appname"
     echo "  restart     stop && start"
     echo "  clean       clean target"
+    echo "  cli         get codegen-cli.jar"
     echo "  jar         build $appname.jar"
     echo "  jars        copy dependencies to target"
     echo "  package     build $appname.jar and copy dependencies to target"
@@ -83,6 +84,11 @@ clean(){
 	mvn clean
 }
 
+cli(){
+	mvn -P cli-1 dependency:copy-dependencies -DincludeScope=provided -DoutputDirectory=target -U
+	mvn -P cli-2 dependency:copy-dependencies -DincludeScope=provided -DoutputDirectory=target -U
+}
+
 jar(){
 	mvn compile jar:jar
 }
@@ -114,6 +120,7 @@ else
 	stop) stop ;;
 	restart) stop && wait && start ;;
 	clean) clean ;;
+	cli) cli ;;
 	jar) jar ;;
 	jars) dependency ;;
 	package) jar && dependency ;;
