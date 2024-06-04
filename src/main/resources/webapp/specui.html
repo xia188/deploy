@@ -11,9 +11,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.12/swagger-ui-standalone-preset.min.js"></script>
 <script>
 window.onload = function() {
+  let params = new URLSearchParams(location.search);
+  let spec = params.get('spec');
 
   const ui = SwaggerUIBundle({
-    url: "spec.yaml",
+    url: !spec ? "spec.yaml" : spec,
     validatorUrl : false,
     dom_id: '#swagger-ui',
     deepLinking: true,

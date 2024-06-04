@@ -12,7 +12,7 @@ externalDocs:
 paths:
   /api/json:
     post:
-      description: config、configFile不能同时为空，openapilambda仅在2.x版本和Java11以上支持。
+      description: config、configFile不能同时为空（否则model、modelFile就能存入target目录供在线访问），openapilambda仅在2.x版本和Java11以上支持。
       requestBody:
         required: true
         content:
@@ -29,7 +29,7 @@ paths:
                   message:
                     type: string
                     description: 错误消息，或者文件路径
-          description: 点击上面的“文件下载”链接，拼接返回的message内容，即可下载生成的zip包。
+          description: 点击上面的“文件下载”链接，拼接返回的message内容，即可下载生成的zip包；或者复制地址栏specui.html之后，即可在线预览yaml规范。
 components:
   schemas:
     Args:
@@ -54,7 +54,7 @@ components:
           type: string
           format: binary
         model:
-          description: 规范文件base64内容（base64 openapi.yaml | clip）或网址：openapi.yaml、swagger.json、schema.json、schema.graphqls，某些framework可以为空
+          description: 规范文件base64内容（base64 openapi.yaml | clip）或网址
           type: string
           example: https://gitee.com/lightgrp/light-service/raw/master/model-config/petstore/openapi.yaml
         modelFile:

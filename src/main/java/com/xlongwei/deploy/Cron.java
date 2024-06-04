@@ -375,6 +375,9 @@ public class Cron {
 					FileUtil.del(outputFile);
 					System.out.println(output + "=" + outputFile.exists() + " " + zip + "=" + zipFile.exists());
 					message = zipFile.exists() ? zip : "生成失败";
+				} else if (modelFile.exists()) {
+					modelFile.renameTo(new File("target/" + modelFile.getName()));
+					message = "?spec=/target/" + modelFile.getName();
 				}
 			} catch (Exception e) {
 				message = e.getMessage();
