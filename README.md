@@ -10,7 +10,7 @@
 #### 使用说明
 ```
 cd /d/workspace/parent #进入项目父目录
-curl https://t.xlongwei.com/windows/deploy.jar -o deploy.jar
+curl http://115.28.229.158/tool/windows/deploy.jar -o deploy.jar
 jar xvf ${SSHDEPLOY:-.}/deploy.jar config/
 cp config/* ./ && rm -rf config/
 vi ~/.bashrc
@@ -57,15 +57,15 @@ sonar.sh，支持每天执行一次代码检查，搭一个sonarqube服务即可
 
 #### 远程操作
 ```
-//外网部署，或直接使用https://deploy.xlongwei.com/
+//外网部署，或直接使用http://115.28.229.158:9881/
 jcron --web
 //内网部署：key是密钥，避免泄露
-jcron --lp.host=https://deploy.xlongwei.com/ --lp.key=xlongwei
+jcron --lp.host=http://115.28.229.158:9881/ --lp.key=xlongwei
 ```
 [架构设计](http://115.28.229.158/tool/images/deploy/deploy.png)
 
 #### light-start支持
-下载[codegen-cli](http://115.28.229.158/mvnrepos/com/networknt/codegen-cli/1.6.47/codegen-cli-1.6.47.jar)到target目录
+[light-start](http://115.28.229.158:9881/specui.html)
 ```
-curl https://repo.maven.apache.org/maven2/com/networknt/codegen-cli/1.6.47/codegen-cli-1.6.47.jar -O
+sh jcron.sh cli
 ```

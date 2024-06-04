@@ -29,6 +29,7 @@ import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.net.multipart.UploadFile;
 import cn.hutool.core.thread.ThreadUtil;
@@ -317,18 +318,32 @@ public class Cron {
     public static class CliAction implements Action {
 
 		@Override
-		public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
+		public synchronized void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
 			String framework = StrUtil.trimToEmpty(request.getParam("framework"));
 			String config = StrUtil.trimToEmpty(request.getParam("config"));
 			String model = StrUtil.trimToEmpty(request.getParam("model"));
 			String release = StrUtil.trimToEmpty(request.getParam("release"));
-			String message = "unknown";
+			String message = "framework不能为空，config和configFile不能同时为空";
 			
 			String cliJar = release.startsWith("2") ? "target/codegen-cli-2.1.32.jar" : "target/codegen-cli-1.6.47.jar";
 			String output = IdUtil.fastSimpleUUID();
 			String zip = "target/" + output + ".zip";
-			File configFile = new File(output + ".config"), modelFile = new File(output + ".yaml");
+			File configFile = new File(output + ".config.json"), modelFile = new File(output + ".yaml");
 			try {
+				//处理文件上传：获取config文本，对model进行base64转码
+				if (request.isMultipart()) {
+					UploadFile upload = request.getMultipart().getFile("configFile");
+					if (upload != null) {
+						config = IoUtil.readUtf8(upload.getFileInputStream());
+					}
+					upload = request.getMultipart().getFile("modelFile");
+					if (upload != null) {
+						model = IoUtil.readUtf8(upload.getFileInputStream());
+						if (!(model.startsWith("{") || model.startsWith("["))) {
+							model = Base64.encode(model);
+						}
+					}
+				}
 				//处理非网址的情形
 				if (config.startsWith("{") || config.startsWith("[")) {
 					FileUtil.writeUtf8String(config, configFile);
@@ -352,13 +367,15 @@ public class Cron {
 					model = modelFile.getName();
 				}
 				//生成项目，打包，删除目录
-				String shell = String.format("java -jar %s -f %s -c %s -m %s -o %s", cliJar, framework, config, model, output);
-				new ShellTask(shell, timeout).execute();
-				new ShellTask("jar cf " + zip + " " + output, timeout).execute();
-				File outputFile = new File(output), zipFile = new File(zip);
-				FileUtil.del(outputFile);
-				System.out.println(output + "=" + outputFile.exists() + " " + zip + "=" + zipFile.exists());
-				message = zipFile.exists() ? zip : "生成失败";
+				if (StrUtil.isAllNotBlank(framework, config)) {
+					String shell = String.format("java -jar %s -f %s -c %s -m %s -o %s", cliJar, framework, config, model, output);
+					new ShellTask(shell, timeout).execute();
+					new ShellTask("jar cf " + zip + " " + output, timeout).execute();
+					File outputFile = new File(output), zipFile = new File(zip);
+					FileUtil.del(outputFile);
+					System.out.println(output + "=" + outputFile.exists() + " " + zip + "=" + zipFile.exists());
+					message = zipFile.exists() ? zip : "生成失败";
+				}
 			} catch (Exception e) {
 				message = e.getMessage();
 			}

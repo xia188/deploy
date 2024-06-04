@@ -2,6 +2,8 @@ openapi: 3.0.0
 info:
   version: 1.0.0
   title: light-start
+  description: |-
+    这是 [light-start](https://gitee.com/lightgrp/light-start) 的轻量级实现，使用hutool.http处理请求并通过命令行调用codegen-cli生成项目。
 servers:
 - url: /
 externalDocs:
@@ -10,11 +12,11 @@ externalDocs:
 paths:
   /api/json:
     post:
-      description: 由于BodyHandler无法处理multipart/form-data上传文件，因此仅支持网址或文本；并且yaml文件粘贴后丢失了格式等信息，所以使用base64转码，而json直接粘貼即可。
+      description: config、configFile不能同时为空，openapilambda仅在2.x版本和Java11以上支持。
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/Args'
       responses:
@@ -47,10 +49,18 @@ components:
           description: 配置groupId、artifactId、package等信息的config.json文件内容（clip < config.json）或网址
           type: string
           example: https://gitee.com/lightgrp/light-service/raw/master/model-config/petstore/config.json
+        configFile:
+          description: 配置文件：config.json
+          type: string
+          format: binary
         model:
           description: 规范文件base64内容（base64 openapi.yaml | clip）或网址：openapi.yaml、swagger.json、schema.json、schema.graphqls，某些framework可以为空
           type: string
           example: https://gitee.com/lightgrp/light-service/raw/master/model-config/petstore/openapi.yaml
+        modelFile:
+          description: 规范文件：openapi.yaml、swagger.json、schema.json、schema.graphqls，某些framework可以为空
+          type: string
+          format: binary
         release:
           description: 版本2.x需JAVA11+支持，且openapilambda仅版本2.x支持
           type: string
@@ -59,4 +69,3 @@ components:
             - 2.x
       required:
       - framework
-      - config
