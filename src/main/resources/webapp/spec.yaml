@@ -4,15 +4,20 @@ info:
   title: light-start
   description: |-
     这是 [light-start](https://gitee.com/lightgrp/light-start) 的轻量级实现，使用hutool.http处理请求并通过命令行调用codegen-cli生成项目。
+    版本1.x和版本2.x的区别：
+     - Java8仅支持版本1.x，Java11及以上支持两个版本的生成
+     - 仅版本2.x支持openapilambda框架，以及config.yaml配置
 servers:
 - url: /
 externalDocs:
-  url: http://localhost:8080/target/
+  url: http://localhost:8080/files/
   description: 文件下载
 paths:
-  /api/json:
+  /codegen:
     post:
       description: config、configFile不能同时为空（否则model、modelFile就能存入target目录供在线访问），openapilambda仅在2.x版本和Java11以上支持。
+      tags:
+        - openapi
       requestBody:
         required: true
         content:
@@ -50,7 +55,7 @@ components:
           type: string
           example: https://gitee.com/lightgrp/light-service/raw/master/model-config/petstore/config.json
         configFile:
-          description: 配置文件：config.json
+          description: 配置文件：config.json（版本2.x还支持config.yaml格式）
           type: string
           format: binary
         model:

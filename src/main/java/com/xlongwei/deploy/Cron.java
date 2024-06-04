@@ -180,7 +180,7 @@ public class Cron {
         SimpleServer server = new SimpleServer(port);
         server.addAction("/", new HtmlAction());
         server.addAction("/deploy", new ShellAction());
-        server.addAction("/api/json", new CliAction());
+        server.addAction("/codegen", new CliAction());
         server.start();
         System.out.printf("web started at http://localhost:%s/\n", port);
     }
@@ -279,7 +279,7 @@ public class Cron {
         @Override
         public void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
             String path = StrUtil.trimToEmpty(request.getPath());
-            if(path.startsWith("/target")) {
+            if(path.startsWith("/files")) {
             	File file = new File(path.substring(1));
             	if(file.exists()) {
             		if(file.isFile()) {
@@ -302,11 +302,11 @@ public class Cron {
         }
 
 		private String dir(File dir) {
-			StringBuilder html = new StringBuilder("<!DOCTYPE html><body><h1>/target/</h1><hr><pre>");
+			StringBuilder html = new StringBuilder("<!DOCTYPE html><body><h1>/files/</h1><hr><pre>");
 			String sep = StrUtil.repeat(' ', 60);
 			for (File file : dir.listFiles()) {
 				if(file.isDirectory()) continue;
-				html.append("\n<a href=\"/target/").append(file.getName()).append("\">").append(file.getName()).append("</a>");
+				html.append("\n<a href=\"/files/").append(file.getName()).append("\">").append(file.getName()).append("</a>");
 				html.append(sep).delete(html.length() - file.getName().length(),html.length()).append(DateUtil.date(file.lastModified()));
 				html.append(sep).append(file.length());
 			}
@@ -325,9 +325,9 @@ public class Cron {
 			String release = StrUtil.trimToEmpty(request.getParam("release"));
 			String message = "framework不能为空，config和configFile不能同时为空";
 			
-			String cliJar = release.startsWith("2") ? "target/codegen-cli-2.1.32.jar" : "target/codegen-cli-1.6.47.jar";
+			String cliJar = release.startsWith("2") ? "files/codegen-cli-2.1.32.jar" : "files/codegen-cli-1.6.47.jar";
 			String output = IdUtil.fastSimpleUUID();
-			String zip = "target/" + output + ".zip";
+			String zip = "files/" + output + ".zip";
 			File configFile = new File(output + ".config.json"), modelFile = new File(output + ".yaml");
 			try {
 				//处理文件上传：获取config文本，对model进行base64转码
@@ -335,6 +335,9 @@ public class Cron {
 					UploadFile upload = request.getMultipart().getFile("configFile");
 					if (upload != null) {
 						config = IoUtil.readUtf8(upload.getFileInputStream());
+						if (!(config.startsWith("{") || config.startsWith("["))) {
+							config = Base64.encode(config);
+						}
 					}
 					upload = request.getMultipart().getFile("modelFile");
 					if (upload != null) {
@@ -345,7 +348,13 @@ public class Cron {
 					}
 				}
 				//处理非网址的情形
-				if (config.startsWith("{") || config.startsWith("[")) {
+				if (StrUtil.isNotBlank(config) && !config.startsWith("http")) {
+					if (!(config.startsWith("{") || config.startsWith("["))) {
+						config = Base64.decodeStr(config);
+						if (!(config.startsWith("{") || config.startsWith("["))) {
+							configFile = new File(output + ".config.yaml");
+						}
+					}
 					FileUtil.writeUtf8String(config, configFile);
 					config = configFile.getName();
 				}
@@ -376,8 +385,8 @@ public class Cron {
 					System.out.println(output + "=" + outputFile.exists() + " " + zip + "=" + zipFile.exists());
 					message = zipFile.exists() ? zip : "生成失败";
 				} else if (modelFile.exists()) {
-					modelFile.renameTo(new File("target/" + modelFile.getName()));
-					message = "?spec=/target/" + modelFile.getName();
+					modelFile.renameTo(new File("files/" + modelFile.getName()));
+					message = "?spec=/files/" + modelFile.getName();
 				}
 			} catch (Exception e) {
 				message = e.getMessage();
