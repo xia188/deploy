@@ -316,6 +316,8 @@ public class Cron {
     }
 
     public static class CliAction implements Action {
+    	private String cliJar1 = StrUtil.blankToDefault(System.getProperty("codegen.jar1"), "files/codegen-cli-1.6.47.jar");
+    	private String cliJar2 = StrUtil.blankToDefault(System.getProperty("codegen.jar2"), "files/codegen-cli-2.1.32.jar");
 
 		@Override
 		public synchronized void doAction(HttpServerRequest request, HttpServerResponse response) throws IOException {
@@ -325,7 +327,7 @@ public class Cron {
 			String release = StrUtil.trimToEmpty(request.getParam("release"));
 			String message = "framework不能为空，config和configFile不能同时为空";
 			
-			String cliJar = release.startsWith("2") ? "files/codegen-cli-2.1.32.jar" : "files/codegen-cli-1.6.47.jar";
+			String cliJar = release.startsWith("2") ? cliJar2 : cliJar1;
 			String output = IdUtil.fastSimpleUUID();
 			String zip = "files/" + output + ".zip";
 			File configFile = new File(output + ".config.json"), modelFile = new File(output + ".yaml");

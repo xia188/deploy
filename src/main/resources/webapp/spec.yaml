@@ -4,9 +4,6 @@ info:
   title: light-start
   description: |-
     这是 [light-start](https://gitee.com/lightgrp/light-start) 的轻量级实现，使用hutool.http处理请求并通过命令行调用codegen-cli生成项目。
-    版本1.x和版本2.x的区别：
-     - Java8仅支持版本1.x，Java11及以上支持两个版本的生成
-     - 仅版本2.x支持openapilambda框架，以及config.yaml配置
 servers:
 - url: /
 externalDocs:
@@ -15,7 +12,7 @@ externalDocs:
 paths:
   /codegen:
     post:
-      description: config、configFile不能同时为空（否则model、modelFile就能存入target目录供在线访问），openapilambda仅在2.x版本和Java11以上支持。
+      description: config、configFile不同时为空时则生成项目，否则model、modelFile就会存入files目录供在线预览；openapilambda仅版本2.x支持。
       tags:
         - openapi
       requestBody:
@@ -67,7 +64,7 @@ components:
           type: string
           format: binary
         release:
-          description: 版本2.x需JAVA11+支持，且openapilambda仅版本2.x支持
+          description: openapilambda仅版本2.x支持
           type: string
           enum:
             - 1.x

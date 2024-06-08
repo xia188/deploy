@@ -68,4 +68,6 @@ jcron --lp.host=http://115.28.229.158:9881/ --lp.key=xlongwei
 [light-start](http://115.28.229.158:9881/specui.html)
 ```
 sh jcron.sh cli
+创建files目录，复制target/codegen-cli*.jar，使用系统变量自定义jar路径
+-Dcodegen.jar1=files/codegen-1.6.47.jar -Dcodegen.jar2=files/codegen-2.1.32.jar
 ```
