@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>deploy</title>
+</head>
+<body>
+<h3>deploy</h3>
+
+<p>支持通过shell脚本自动部署项目</p>
+
+<h4>使用说明</h4>
+
+<ul>
+<li>编译打包：sh jcron.sh deploy</li>
+<li>启动项目：sh jcron.sh start，支持定时执行auto.sh自动部署</li>
+<li>配置别名：vi ~/.bashrc，jscp支持上传文件，jssh支持远程执行</li>
+</ul>
+
+<blockquote>
+  <p>alias jssh='java -cp ${SSHDEPLOY:-.}/deploy.jar com.xlongwei.deploy.Ssh'</p>
+  
+  <p>alias jscp='java -cp ${SSHDEPLOY:-.}/deploy.jar com.xlongwei.deploy.Scp'</p>
+</blockquote>
+
+<h4>手动部署</h4>
+
+<ul>
+<li>sh init.sh order 24，初始化部署</li>
+<li>sh deploy.sh dev order 24，增量部署</li>
+<li>sh deploys.sh order，批量部署</li>
+</ul>
+
+<h4>自动部署</h4>
+
+<ul>
+<li>vi auto.sh，配置哪些服务需要自动部署</li>
+<li>vi deploys.sh，配置各服务需要部署到哪些namespace和ip</li>
+<li>vi sonar.sh，每天执行一次代码检查，需搭一个sonarqube服务</li>
+</ul>
+
+<h4>远程部署</h4>
+
+<ul>
+<li>jcron --lp.host=http://115.28.229.158:9881/ --lp.key=deploy，lp.key是密钥不能泄露</li>
+<li>访问<a href="http://115.28.229.158:9881/" target="_blank">lp.host</a>，key密钥，deploy部署服务（内网执行deploy.sh），deploys批量部署（内网执行deploys.sh）</li>
+</ul>
+</body>
+</html>
